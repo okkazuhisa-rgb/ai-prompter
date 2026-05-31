@@ -472,7 +472,7 @@
     </div>
 
     <!-- Prompter area -->
-    <div class="prompter-container" onclick="resetVisualCountdownForce()">
+    <div class="prompter-container" onclick="handlePrompterTap()">
         <div id="prompter-text" class="style-white">
             会話を開始すると<br>
             ここに次の発言候補が<br>
@@ -541,6 +541,14 @@
                 <option value="gemini-2-flash">Gemini 2 Flash</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
+        </div>
+
+        <div class="form-group">
+            <label>自動送信までの無音時間</label>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 4px 0;">
+                <input type="range" id="setting-silence-duration" min="1.0" max="5.0" step="0.5" value="2.0" style="flex: 1;" oninput="updateSilenceDurationDisplay(this.value)">
+                <span id="silence-duration-display" style="font-size: 14px; font-weight: 700; min-width: 50px; text-align: right;">2.0秒</span>
+            </div>
         </div>
 
         <div class="form-group">
@@ -620,6 +628,7 @@
         let systemPrompt = "";
         let historyLimit = 10;
         let modelName = "gemini-2.5-flash";
+        let silenceDuration = 2.0; // 秒（デフォルト2.0秒）
 
         // --- Helper: Deduplicate Speech recognition results (handles Android Chrome duplication bug) ---
         function mergeSpeechResults(results) {
@@ -670,6 +679,7 @@
             fontSizeBase = parseFloat(localStorage.getItem('ai_prompter_font_size')) || 6.5;
             historyLimit = parseInt(localStorage.getItem('ai_prompter_history_limit')) || 10;
             modelName = localStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
+            silenceDuration = parseFloat(localStorage.getItem('ai_prompter_silence_duration')) || 2.0;
             systemPrompt = localStorage.getItem('ai_prompter_system_prompt') || document.getElementById('setting-system-prompt').value;
             
             const localHist = localStorage.getItem('ai_prompter_history');
@@ -686,6 +696,8 @@
             document.getElementById('setting-model-name').value = modelName;
             document.getElementById('setting-history-limit').value = historyLimit;
             document.getElementById('setting-system-prompt').value = systemPrompt;
+            document.getElementById('setting-silence-duration').value = silenceDuration;
+            document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
             
             updateFontStyles();
             renderHistoryUI();
@@ -696,16 +708,19 @@
             const inputModelName = document.getElementById('setting-model-name').value;
             const inputLimit = parseInt(document.getElementById('setting-history-limit').value);
             const inputPrompt = document.getElementById('setting-system-prompt').value.trim();
+            const inputSilence = parseFloat(document.getElementById('setting-silence-duration').value);
 
             apiKey = inputKey;
             modelName = inputModelName;
             historyLimit = inputLimit;
             systemPrompt = inputPrompt;
+            silenceDuration = inputSilence;
 
             localStorage.setItem('ai_prompter_api_key', apiKey);
             localStorage.setItem('ai_prompter_model_name', modelName);
             localStorage.setItem('ai_prompter_history_limit', historyLimit);
             localStorage.setItem('ai_prompter_system_prompt', systemPrompt);
+            localStorage.setItem('ai_prompter_silence_duration', silenceDuration);
             
             checkApiKeyStatus();
             toggleSettings(false);
@@ -720,9 +735,14 @@
                 localStorage.removeItem('ai_prompter_history_limit');
                 localStorage.removeItem('ai_prompter_system_prompt');
                 localStorage.removeItem('ai_prompter_model_name');
+                localStorage.removeItem('ai_prompter_silence_duration');
                 localStorage.removeItem('ai_prompter_history');
                 location.reload();
             }
+        }
+
+        function updateSilenceDurationDisplay(val) {
+            document.getElementById('silence-duration-display').textContent = parseFloat(val).toFixed(1) + "秒";
         }
 
         function checkApiKeyStatus() {
@@ -942,8 +962,9 @@
                 const progressEl = document.getElementById('silence-progress');
 
                 if (countdownActive) {
-                    // Calculate visual progress percentage (starts at 100% when voice detected, decreases to 0% at 3s)
-                    const percent = Math.max(0, 100 - (elapsed / SILENCE_DURATION_MS) * 100);
+                    // Calculate visual progress percentage (starts at 100% when voice detected, decreases to 0% at configured seconds)
+                    const limitMs = silenceDuration * 1000;
+                    const percent = Math.max(0, 100 - (elapsed / limitMs) * 100);
                     progressEl.style.width = `${percent}%`;
 
                     // Update indicator colors based on countdown remaining
@@ -973,12 +994,30 @@
             progressEl.style.width = '0%';
         }
 
-        // User can manually tap the screen to clear/reset the timer or cancel trigger if needed
-        function resetVisualCountdownForce() {
-            if (isListening) {
-                lastSpeechTime = Date.now();
-                countdownActive = true;
-                console.log("Silence countdown reset by tap.");
+        // Screen Tap Handler: If running and spoke, instantly trigger. If stopped, start it.
+        function handlePrompterTap() {
+            if (!isListening) {
+                console.log("Prompter tapped: starting recording.");
+                startRecognition();
+                return;
+            }
+            
+            const textToCommit = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
+            if (textToCommit) {
+                console.log("Prompter tapped: manual override trigger.");
+                
+                // Immediately reset progress bar to 0%
+                const progressEl = document.getElementById('silence-progress');
+                if (progressEl) {
+                    progressEl.style.width = '0%';
+                    progressEl.style.backgroundColor = '#ff3b30';
+                }
+                countdownActive = false;
+                
+                // Trigger Gemini API immediately
+                commitSpeechAndTriggerAI();
+            } else {
+                console.log("Prompter tapped but no speech captured yet.");
             }
         }
 
