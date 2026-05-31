@@ -1110,7 +1110,7 @@ ${systemPrompt}
                 debugPanel.textContent = `=== [SENDING PROMPT] ===\n${userPromptText}\n\n=== [AWAITING RESPONSE] ===`;
             }
 
-            // Payload without "systemInstruction" at root to ensure 100% API version compatibility
+            // Payload with maxOutputTokens increased to 250 and safetySettings set to BLOCK_NONE
             const payload = {
                 contents: [
                     {
@@ -1120,8 +1120,26 @@ ${systemPrompt}
                 ],
                 generationConfig: {
                     temperature: 0.75,
-                    maxOutputTokens: 120
-                }
+                    maxOutputTokens: 250
+                },
+                safetySettings: [
+                    {
+                        category: "HARM_CATEGORY_HARASSMENT",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_HATE_SPEECH",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold: "BLOCK_NONE"
+                    }
+                ]
             };
 
             // We will try v1beta first. If it fails, we will try v1.
@@ -1165,15 +1183,22 @@ ${systemPrompt}
                 }
 
                 const data = await response.json();
+                
+                if (debugPanel) {
+                    // Render raw JSON response nicely for developer debugging
+                    const prettyResponse = JSON.stringify(data, null, 2);
+                    debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
+                }
+
                 const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 
                 if (aiResponseText) {
-                    if (debugPanel) {
-                        debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [RECEIVED RESPONSE] ===\n${aiResponseText}`;
-                    }
                     parseAndDisplayOutput(aiResponseText);
                 } else {
-                    throw new Error("No response content from Gemini.");
+                    const candidate = data.candidates?.[0] || {};
+                    const finishReason = candidate.finishReason || "UNKNOWN";
+                    const safetyRatings = JSON.stringify(candidate.safetyRatings || {});
+                    throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}, SafetyRatings: ${safetyRatings}`);
                 }
                 
                 if (isListening) {
@@ -1224,15 +1249,39 @@ ${systemPrompt}
             content = content.replace(/```/g, '').trim();
 
             let matchedTag = "WHITE"; // デフォルトの色は白
+            let tagStringFound = "";
 
-            // 2. 文中から [WHITE], [YELLOW], [RED] のタグを探索する
-            const tagMatch = content.match(/\[(WHITE|YELLOW|RED)\]/i);
-            
-            if (tagMatch) {
-                matchedTag = tagMatch[1].toUpperCase();
-                // タグの出現位置を取得し、タグより前にあるテキスト（前置きの文章など）をすべてカットする
-                const tagIndex = content.indexOf(tagMatch[0]);
-                content = content.substring(tagIndex + tagMatch[0].length).trim();
+            // 2. 文中から不完全な形式を含むタグ [WHITE], [YELLOW], [RED] を探索する
+            // 閉じ括弧が抜けている [WHITE や、先頭の括弧がない WHITE]、括弧のない文字単体にもマッチさせる
+            const upperContent = content.toUpperCase();
+            if (upperContent.includes("WHITE")) {
+                matchedTag = "WHITE";
+                tagStringFound = "WHITE";
+            } else if (upperContent.includes("YELLOW")) {
+                matchedTag = "YELLOW";
+                tagStringFound = "YELLOW";
+            } else if (upperContent.includes("RED")) {
+                matchedTag = "RED";
+                tagStringFound = "RED";
+            }
+
+            if (tagStringFound) {
+                // 発見したキーワードのインデックスを取得
+                const keywordIndex = upperContent.indexOf(tagStringFound);
+                
+                // キーワードの直前と直後にブラケット '[' や ']' があれば一緒に切り出す
+                let startIndex = keywordIndex;
+                if (keywordIndex > 0 && content[keywordIndex - 1] === '[') {
+                    startIndex = keywordIndex - 1;
+                }
+                
+                let endIndex = keywordIndex + tagStringFound.length;
+                if (endIndex < content.length && content[endIndex] === ']') {
+                    endIndex = endIndex + 1;
+                }
+                
+                // タグ以前の不要なプレテキストとタグ文字列自体をすべてカット
+                content = content.substring(endIndex).trim();
             }
 
             // 3. スタイルの適用
@@ -1245,7 +1294,12 @@ ${systemPrompt}
                 textEl.classList.add('style-white');
             }
 
-            // 4. 極大テキストとして表示
+            // 4. 空の応答へのフォールバック
+            if (!content) {
+                content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
+            }
+
+            // 5. 極大テキストとして表示
             textEl.textContent = content;
         }
 
