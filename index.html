@@ -761,8 +761,7 @@
             recognition.onstart = () => {
                 console.log("Speech recognition started");
                 updateStatus("LISTENING", "active");
-                lastSpeechTime = Date.now();
-                startCountdownLoop();
+                ensureCountdownLoopRunning();
                 requestWakeLock();
             };
 
@@ -851,6 +850,8 @@
             isListening = true;
             accumulatedSessionText = "";
             currentInterimText = "";
+            countdownActive = false;
+            lastSpeechTime = null; // 初回は発話検知までタイマーを走らせない
             
             // Clean visual countdown
             const progressEl = document.getElementById('silence-progress');
@@ -877,9 +878,8 @@
         }
 
         // --- Visual Silence Timer Loop ---
-        function startCountdownLoop() {
-            if (silenceCheckInterval) clearInterval(silenceCheckInterval);
-            countdownActive = false;
+        function ensureCountdownLoopRunning() {
+            if (silenceCheckInterval) return; // 既にタイマーループが動いていれば何もしない (再接続時のタイマー維持)
             
             silenceCheckInterval = setInterval(() => {
                 if (!isListening || !lastSpeechTime) return;
@@ -914,6 +914,7 @@
                 clearInterval(silenceCheckInterval);
                 silenceCheckInterval = null;
             }
+            countdownActive = false;
             const progressEl = document.getElementById('silence-progress');
             progressEl.style.width = '0%';
         }
