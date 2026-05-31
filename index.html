@@ -463,6 +463,7 @@
             :root {
                 --font-size-base: 5.5vh;
             }
+        }
         /* Edge Glow Overlays */
         .edge-glow {
             position: fixed;
@@ -544,6 +545,13 @@
 
     <!-- Edge Glow Inset Screen Shadow -->
     <div id="edge-glow" class="edge-glow"></div>
+
+    <!-- Global JS Error Banner for mobile debugging -->
+    <div id="js-error-banner" style="display: none; background: #ff3b30; color: white; padding: 15px; font-size: 13px; font-weight: 700; text-align: left; z-index: 9999; position: fixed; top: 0; left: 0; width: 100%; box-sizing: border-box; word-break: break-all; overflow-y: auto; max-height: 50vh;">
+        <span>【JSエラー検知】</span>
+        <div id="js-error-msg" style="margin-top: 5px; font-family: monospace; white-space: pre-wrap;"></div>
+        <button onclick="document.getElementById('js-error-banner').style.display='none'" style="margin-top: 10px; background: white; color: black; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">閉じる</button>
+    </div>
 
     <!-- API Warning banner if key is not configured -->
     <div id="api-warning" onclick="toggleSettings(true)" style="display: none;">
@@ -629,7 +637,7 @@
             <label for="setting-api-key">Gemini API キー</label>
             <div class="api-key-input-container">
                 <input type="password" id="setting-api-key" placeholder="AIzaSy...">
-                <button class="btn-small" onclick="toggleApiKeyVisibility()">表示</button>
+                <button class="btn-small" onclick="toggleApiKeyVisibility(event)">表示</button>
             </div>
         </div>
 
@@ -725,6 +733,45 @@
     </div>
 
     <script>
+        // Global error handler to help mobile debugging
+        window.addEventListener('error', (event) => {
+            const banner = document.getElementById('js-error-banner');
+            const msgEl = document.getElementById('js-error-msg');
+            if (banner && msgEl) {
+                banner.style.display = 'block';
+                msgEl.textContent = `${event.message}\nat ${event.filename}:${event.lineno}:${event.colno}\n\nStack: ${event.error ? event.error.stack : 'N/A'}`;
+            }
+        });
+
+        // --- Safe Storage Utility to bypass SecurityError inside strict WebViews / private browsing ---
+        const safeStorage = {
+            _data: {},
+            getItem(key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch (e) {
+                    console.warn("localStorage.getItem failed for key '" + key + "':", e);
+                    return this._data[key] || null;
+                }
+            },
+            setItem(key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch (e) {
+                    console.warn("localStorage.setItem failed for key '" + key + "':", e);
+                    this._data[key] = String(value);
+                }
+            },
+            removeItem(key) {
+                try {
+                    localStorage.removeItem(key);
+                } catch (e) {
+                    console.warn("localStorage.removeItem failed for key '" + key + "':", e);
+                    delete this._data[key];
+                }
+            }
+        };
+
         // --- State Management ---
         let recognition = null;
         let isListening = false;
@@ -760,7 +807,7 @@
 【ルール】
 1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
 2. ユーザーがその場で口にすることで、議論のレベルが一気に上がるような「具体的な根拠、対立軸の指摘、懸念点、あるいは代替案」を提案してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
 
 【タグの選定基準】
 - [WHITE] ：鋭い指摘、納得感のある根拠、建設的な提案、本質を突く質問。
@@ -775,7 +822,7 @@
 【ルール】
 1. 当たり前の意見やオウム返しは【絶対に禁止】です。
 2. ユーザーの発想を大きく広げるための「斬新な切り口、他業界のモデルの応用、またはユニークな疑問」を提案してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
 
 【タグの選定基準】
 - [WHITE] ：ユニークな着想、発展性のあるアイデア、面白い仮説。
@@ -790,7 +837,7 @@
 【ルール】
 1. 単に話を聞き流すだけや、「どうぞ」といった単調なオウム返しは【絶対に禁止】です。
 2. 对立する意見の共通点を見出したり、アジェンダに戻したり、誰もが納得しやすい折衷案を提示してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
 
 【タグの選定基準】
 - [WHITE] ：現在の議論の要点整理、次に合意すべきアジェンダの提示。
@@ -832,35 +879,70 @@
 
         // --- Initialization ---
         window.addEventListener('DOMContentLoaded', () => {
-            loadSettings();
-            initSpeechRecognition();
-            updateUIState();
-            setupSwipeGestures();
+            try {
+                loadSettings();
+            } catch (err) {
+                console.error("Error loading settings:", err);
+            }
             
-            // Periodically check if API Key warning is needed
-            checkApiKeyStatus();
+            try {
+                initSpeechRecognition();
+            } catch (err) {
+                console.error("Error initializing speech recognition:", err);
+                updateStatus("NOT SUPPORTED", "error");
+                const liveEl = document.getElementById('live-transcript');
+                if (liveEl) {
+                    liveEl.textContent = "エラー: 音声認識の初期化に失敗しました。";
+                }
+            }
+            
+            try {
+                updateUIState();
+            } catch (err) {
+                console.error("Error updating UI state:", err);
+            }
+            
+            try {
+                setupSwipeGestures();
+            } catch (err) {
+                console.error("Error setting up swipe gestures:", err);
+            }
+            
+            try {
+                checkApiKeyStatus();
+            } catch (err) {
+                console.error("Error checking API key status:", err);
+            }
 
-            // Setup document interaction to regain Wake Lock if lost
             document.addEventListener('visibilitychange', handleVisibilityChange);
         });
 
-        // --- Settings Management (localStorage) ---
+        // --- Settings Management (localStorage via safeStorage) ---
         function loadSettings() {
-            apiKey = localStorage.getItem('ai_prompter_api_key') || "";
-            fontSizeBase = parseFloat(localStorage.getItem('ai_prompter_font_size')) || 6.5;
-            historyLimit = parseInt(localStorage.getItem('ai_prompter_history_limit')) || 10;
-            modelName = localStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
-            silenceDuration = parseFloat(localStorage.getItem('ai_prompter_silence_duration')) || 2.0;
+            apiKey = safeStorage.getItem('ai_prompter_api_key') || "";
+            fontSizeBase = parseFloat(safeStorage.getItem('ai_prompter_font_size')) || 6.5;
+            historyLimit = parseInt(safeStorage.getItem('ai_prompter_history_limit')) || 10;
+            modelName = safeStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
+            silenceDuration = parseFloat(safeStorage.getItem('ai_prompter_silence_duration')) || 2.0;
             
-            activePersona = localStorage.getItem('ai_prompter_active_persona') || "debate";
-            isTtsEnabled = localStorage.getItem('ai_prompter_tts_enabled') === 'true';
+            let savedPersona = safeStorage.getItem('ai_prompter_active_persona');
+            if (!savedPersona || !PERSONA_CONFIGS[savedPersona]) {
+                savedPersona = "debate";
+            }
+            activePersona = savedPersona;
             
-            systemPrompt = localStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || PERSONA_CONFIGS[activePersona].prompt;
+            isTtsEnabled = safeStorage.getItem('ai_prompter_tts_enabled') === 'true';
+            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || (PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].prompt : "");
             
-            const localHist = localStorage.getItem('ai_prompter_history');
+            const localHist = safeStorage.getItem('ai_prompter_history');
             if (localHist) {
                 try {
-                    conversationHistory = JSON.parse(localHist);
+                    const parsed = JSON.parse(localHist);
+                    if (Array.isArray(parsed)) {
+                        conversationHistory = parsed;
+                    } else {
+                        conversationHistory = [];
+                    }
                 } catch(e) {
                     conversationHistory = [];
                 }
@@ -912,13 +994,13 @@
             systemPrompt = inputPrompt;
             silenceDuration = inputSilence;
 
-            localStorage.setItem('ai_prompter_api_key', apiKey);
-            localStorage.setItem('ai_prompter_model_name', modelName);
-            localStorage.setItem('ai_prompter_history_limit', historyLimit);
-            localStorage.setItem('ai_prompter_silence_duration', silenceDuration);
+            safeStorage.setItem('ai_prompter_api_key', apiKey);
+            safeStorage.setItem('ai_prompter_model_name', modelName);
+            safeStorage.setItem('ai_prompter_history_limit', historyLimit);
+            safeStorage.setItem('ai_prompter_silence_duration', silenceDuration);
             
             // Save prompt for the active persona specifically
-            localStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
+            safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
             
             checkApiKeyStatus();
             toggleSettings(false);
@@ -928,25 +1010,27 @@
 
         function resetSettingsToDefault() {
             if (confirm("設定を初期値（デフォルト）に戻しますか？")) {
-                localStorage.removeItem('ai_prompter_api_key');
-                localStorage.removeItem('ai_prompter_font_size');
-                localStorage.removeItem('ai_prompter_history_limit');
-                localStorage.removeItem('ai_prompter_system_prompt');
-                localStorage.removeItem('ai_prompter_model_name');
-                localStorage.removeItem('ai_prompter_silence_duration');
-                localStorage.removeItem('ai_prompter_history');
+                safeStorage.removeItem('ai_prompter_api_key');
+                safeStorage.removeItem('ai_prompter_font_size');
+                safeStorage.removeItem('ai_prompter_history_limit');
+                safeStorage.removeItem('ai_prompter_system_prompt');
+                safeStorage.removeItem('ai_prompter_model_name');
+                safeStorage.removeItem('ai_prompter_silence_duration');
+                safeStorage.removeItem('ai_prompter_history');
                 location.reload();
             }
         }
 
-        function toggleDebugInfo(event) {
+        function toggleDebugInfo(e) {
             const panel = document.getElementById('debug-info-panel');
-            if (panel.style.display === 'none') {
+            const evt = e || window.event;
+            const target = evt ? evt.target : null;
+            if (panel && panel.style.display === 'none') {
                 panel.style.display = 'block';
-                event.target.textContent = "非表示";
-            } else {
+                if (target) target.textContent = "非表示";
+            } else if (panel) {
                 panel.style.display = 'none';
-                event.target.textContent = "表示";
+                if (target) target.textContent = "表示";
             }
         }
 
@@ -963,14 +1047,16 @@
             }
         }
 
-        function toggleApiKeyVisibility() {
+        function toggleApiKeyVisibility(e) {
             const keyInput = document.getElementById('setting-api-key');
+            const evt = e || window.event;
+            const target = evt ? evt.target : null;
             if (keyInput.type === 'password') {
                 keyInput.type = 'text';
-                event.target.textContent = "隠す";
+                if (target) target.textContent = "隠す";
             } else {
                 keyInput.type = 'password';
-                event.target.textContent = "表示";
+                if (target) target.textContent = "表示";
             }
         }
 
@@ -990,18 +1076,25 @@
 
         function adjustFontSize(delta) {
             fontSizeBase = Math.max(3.0, Math.min(12.0, fontSizeBase + delta));
-            localStorage.setItem('ai_prompter_font_size', fontSizeBase);
+            safeStorage.setItem('ai_prompter_font_size', fontSizeBase);
             updateFontStyles();
         }
 
         function updateFontStyles() {
-            document.getElementById('font-size-display').textContent = `${fontSizeBase.toFixed(1)}vw`;
+            if (isNaN(fontSizeBase)) {
+                fontSizeBase = 6.5;
+            }
+            const displayEl = document.getElementById('font-size-display');
+            if (displayEl) {
+                displayEl.textContent = `${fontSizeBase.toFixed(1)}vw`;
+            }
             document.documentElement.style.setProperty('--font-size-base', `${fontSizeBase}vw`);
         }
 
         // --- History Logic ---
         function renderHistoryUI() {
             const container = document.getElementById('history-preview');
+            if (!container) return;
             if (conversationHistory.length === 0) {
                 container.innerHTML = '<div class="history-empty">会話履歴はありません。</div>';
                 return;
@@ -1011,13 +1104,13 @@
             ).join('');
             
             // Save log internally
-            localStorage.setItem('ai_prompter_history', JSON.stringify(conversationHistory));
+            safeStorage.setItem('ai_prompter_history', JSON.stringify(conversationHistory));
         }
 
         function clearHistory() {
             if (confirm("会話ログ（コンテキスト）を消去しますか？")) {
                 conversationHistory = [];
-                localStorage.removeItem('ai_prompter_history');
+                safeStorage.removeItem('ai_prompter_history');
                 renderHistoryUI();
             }
         }
@@ -1329,7 +1422,7 @@ ${systemPrompt}
             };
 
             // gemini-2.5 系のモデルの場合、思考プロセスを無効化（低レイテンシー化）する
-            if (modelName.startsWith("gemini-2.5")) {
+            if (modelName && typeof modelName === 'string' && modelName.startsWith("gemini-2.5")) {
                 payload.generationConfig.thinkingConfig = {
                     thinkingBudget: 0
                 };
@@ -1358,7 +1451,7 @@ ${systemPrompt}
                             parsedErr = JSON.parse(errText);
                         } catch(e) {}
                         
-                        const msg = parsedErr?.error?.message || errText || `Status ${response.status}`;
+                        const msg = (parsedErr && parsedErr.error && parsedErr.error.message) ? parsedErr.error.message : (errText || `Status ${response.status}`);
                         errors[version] = msg;
                         console.warn(`Gemini API version ${version} failed:`, msg);
                     }
@@ -1383,12 +1476,12 @@ ${systemPrompt}
                     debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
                 }
 
-                const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                const aiResponseText = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) ? data.candidates[0].content.parts[0].text : null;
                 
                 if (aiResponseText) {
                     parseAndDisplayOutput(aiResponseText);
                 } else {
-                    const candidate = data.candidates?.[0] || {};
+                    const candidate = (data && data.candidates && data.candidates[0]) ? data.candidates[0] : {};
                     const finishReason = candidate.finishReason || "UNKNOWN";
                     const safetyRatings = JSON.stringify(candidate.safetyRatings || {});
                     throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}, SafetyRatings: ${safetyRatings}`);
@@ -1546,19 +1639,27 @@ ${systemPrompt}
         let touchEndY = 0;
 
         function setupSwipeGestures() {
-            const container = document.querySelector('.prompter-container');
-            if (!container) return;
-            
-            container.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-                touchStartY = e.changedTouches[0].screenY;
-            }, { passive: true });
-            
-            container.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
-                touchEndY = e.changedTouches[0].screenY;
-                handleSwipeGesture();
-            }, { passive: true });
+            try {
+                const container = document.querySelector('.prompter-container');
+                if (!container) return;
+                
+                container.addEventListener('touchstart', (e) => {
+                    if (e.changedTouches && e.changedTouches[0]) {
+                        touchStartX = e.changedTouches[0].screenX;
+                        touchStartY = e.changedTouches[0].screenY;
+                    }
+                }, { passive: true });
+                
+                container.addEventListener('touchend', (e) => {
+                    if (e.changedTouches && e.changedTouches[0]) {
+                        touchEndX = e.changedTouches[0].screenX;
+                        touchEndY = e.changedTouches[0].screenY;
+                        handleSwipeGesture();
+                    }
+                }, { passive: true });
+            } catch (err) {
+                console.error("Failed to setup swipe gestures:", err);
+            }
         }
 
         function handleSwipeGesture() {
@@ -1584,7 +1685,7 @@ ${systemPrompt}
         function switchPersona(persona) {
             if (activePersona === persona) return;
             activePersona = persona;
-            localStorage.setItem('ai_prompter_active_persona', activePersona);
+            safeStorage.setItem('ai_prompter_active_persona', activePersona);
             
             // タブ表示の更新
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
@@ -1592,7 +1693,7 @@ ${systemPrompt}
             if (activeTab) activeTab.classList.add('active');
             
             // システムプロンプト編集エリアとグローバル変数の同期
-            systemPrompt = localStorage.getItem(`ai_prompter_system_prompt_${persona}`) || PERSONA_CONFIGS[persona].prompt;
+            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`) || PERSONA_CONFIGS[persona].prompt;
             document.getElementById('setting-system-prompt').value = systemPrompt;
             
             // 一時的にグローエフェクトを点滅させて切り替えを通知
@@ -1619,7 +1720,7 @@ ${systemPrompt}
         // --- Text-to-Speech (TTS) Engine ---
         function toggleTts() {
             isTtsEnabled = !isTtsEnabled;
-            localStorage.setItem('ai_prompter_tts_enabled', isTtsEnabled);
+            safeStorage.setItem('ai_prompter_tts_enabled', isTtsEnabled);
             
             const btn = document.getElementById('btn-tts');
             const iconOff = document.getElementById('icon-tts-off');
@@ -1634,32 +1735,40 @@ ${systemPrompt}
                 if (btn) btn.classList.remove('active');
                 if (iconOff) iconOff.style.display = 'block';
                 if (iconOn) iconOn.style.display = 'none';
-                window.speechSynthesis.cancel(); // 読み上げ中なら停止
+                if ('speechSynthesis' in window && window.speechSynthesis) {
+                    window.speechSynthesis.cancel(); // 読み上げ中なら停止
+                }
             }
         }
 
         function speakText(text) {
-            if (!isTtsEnabled || !('speechSynthesis' in window)) return;
-            
-            window.speechSynthesis.cancel(); // 進行中の発話をキャンセル
-            
-            let cleanText = text.trim();
-            if (!cleanText) return;
-            
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.lang = 'ja-JP';
-            
-            // 最適な日本語の音声を使用
-            const voices = window.speechSynthesis.getVoices();
-            const jaVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang.startsWith('ja'));
-            if (jaVoice) {
-                utterance.voice = jaVoice;
+            try {
+                if (!isTtsEnabled || !('speechSynthesis' in window) || !window.speechSynthesis) return;
+                
+                window.speechSynthesis.cancel(); // 進行中の発話をキャンセル
+                
+                let cleanText = text.trim();
+                if (!cleanText) return;
+                
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.lang = 'ja-JP';
+                
+                // 最適な日本語の音声を使用
+                const voices = window.speechSynthesis.getVoices();
+                if (voices && voices.find) {
+                    const jaVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang.startsWith('ja'));
+                    if (jaVoice) {
+                        utterance.voice = jaVoice;
+                    }
+                }
+                
+                utterance.rate = 1.15; // テンポよく読み上げるため少し早め
+                utterance.pitch = 1.0;
+                
+                window.speechSynthesis.speak(utterance);
+            } catch (err) {
+                console.error("SpeechSynthesis error:", err);
             }
-            
-            utterance.rate = 1.15; // テンポよく読み上げるため少し早め
-            utterance.pitch = 1.0;
-            
-            window.speechSynthesis.speak(utterance);
         }
 
         // --- UI State Management Helpers ---
