@@ -592,8 +592,9 @@
         // --- State Management ---
         let recognition = null;
         let isListening = false;
-        let accumulatedSessionText = "";
-        let currentInterimText = "";
+        let accumulatedPastText = ""; // 過去のセッションで確定したテキストの蓄積
+        let currentSessionFinalText = ""; // 現在のセッションで確定したテキスト
+        let currentInterimText = ""; // 現在のセッションの未確定テキスト（一時保存）
         let conversationHistory = [];
         let wakeLock = null;
         
@@ -766,27 +767,25 @@
             };
 
             recognition.onresult = (event) => {
+                let finalSessionText = "";
                 let interimText = "";
-                let newlyFinalizedText = "";
 
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                // Android Chrome等の重複バグを防ぐため、resultIndexを使わず、results配列全体からテキストを再構築する
+                for (let i = 0; i < event.results.length; ++i) {
                     const result = event.results[i];
                     if (result.isFinal) {
-                        newlyFinalizedText += result[0].transcript;
+                        finalSessionText += result[0].transcript + " ";
                     } else {
                         interimText += result[0].transcript;
                     }
                 }
 
-                // Append newly finalized text to session buffer
-                if (newlyFinalizedText) {
-                    accumulatedSessionText += newlyFinalizedText + " ";
-                }
+                currentSessionFinalText = finalSessionText;
                 currentInterimText = interimText;
 
                 // Live preview display
                 const previewEl = document.getElementById('live-transcript');
-                const fullText = (accumulatedSessionText + currentInterimText).trim();
+                const fullText = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
                 
                 if (fullText) {
                     previewEl.textContent = fullText;
@@ -816,6 +815,11 @@
             recognition.onend = () => {
                 console.log("Speech recognition ended.");
                 if (isListening) {
+                    // セッションが自動切断＆再起動される際、現在セッションで確定しているテキストを過去バッファに退避する
+                    accumulatedPastText += currentSessionFinalText;
+                    currentSessionFinalText = "";
+                    currentInterimText = "";
+
                     // Auto-restart to enable continuous hands-free operation
                     console.log("Auto-restarting speech recognition...");
                     try {
@@ -848,7 +852,8 @@
 
         function startRecognition() {
             isListening = true;
-            accumulatedSessionText = "";
+            accumulatedPastText = "";
+            currentSessionFinalText = "";
             currentInterimText = "";
             countdownActive = false;
             lastSpeechTime = null; // 初回は発話検知までタイマーを走らせない
@@ -930,10 +935,11 @@
 
         // --- Commit Speech & Call Gemini API ---
         function commitSpeechAndTriggerAI() {
-            const finalSpeech = (accumulatedSessionText + currentInterimText).trim();
+            const finalSpeech = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
             
             // Clean buffers immediately so we don't double trigger
-            accumulatedSessionText = "";
+            accumulatedPastText = "";
+            currentSessionFinalText = "";
             currentInterimText = "";
             
             if (!finalSpeech) {
