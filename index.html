@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI Prompter - Hands-free Real-time AI Prompter</title>
+    <!-- Google Fonts: Outfit (Premium & Modern Sans-serif) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --card-bg: rgba(25, 25, 25, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --text-dark: #444444;
+            --color-white: #ffffff;
+            --color-yellow: #ffcc00;
+            --color-red: #ff3b30;
+            --glow-white: rgba(255, 255, 255, 0.35);
+            --glow-yellow: rgba(255, 204, 0, 0.45);
+            --glow-red: rgba(255, 59, 48, 0.55);
+            --font-size-base: 6.5vw;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            height: 100vh;
+            height: -webkit-fill-available;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* API Key Warning Banner */
+        #api-warning {
+            background: rgba(255, 59, 48, 0.15);
+            border-bottom: 1px solid rgba(255, 59, 48, 0.3);
+            color: #ff453a;
+            padding: 10px 15px;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            z-index: 99;
+        }
+
+        /* Prompter Display Container */
+        .prompter-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        #prompter-text {
+            font-size: var(--font-size-base);
+            font-weight: 900;
+            line-height: 1.35;
+            letter-spacing: -0.02em;
+            word-break: break-all;
+            white-space: pre-wrap;
+            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 100%;
+        }
+
+        /* Styling Classes mapped dynamically from tags */
+        .style-white {
+            color: var(--color-white) !important;
+            text-shadow: 0 0 20px var(--glow-white);
+        }
+
+        .style-yellow {
+            color: var(--color-yellow) !important;
+            text-shadow: 0 0 25px var(--glow-yellow);
+        }
+
+        .style-red {
+            color: var(--color-red) !important;
+            text-shadow: 0 0 25px var(--glow-red);
+        }
+
+        /* Silence countdown progress bar */
+        .progress-bar-container {
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.05);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #silence-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #30d158, #ffcc00);
+            transition: width 0.1s linear, background-color 0.3s;
+            box-shadow: 0 0 8px rgba(48, 209, 88, 0.5);
+        }
+
+        /* Debug / Live Transcript Preview */
+        .live-preview-container {
+            padding: 12px 20px;
+            text-align: center;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        #live-transcript {
+            font-size: 13px;
+            color: var(--text-dim);
+            font-weight: 500;
+            max-width: 85%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            opacity: 0.85;
+            transition: color 0.2s;
+        }
+
+        #live-transcript.active {
+            color: #30d158;
+        }
+
+        /* Controller Bar */
+        .controller-bar {
+            background: var(--card-bg);
+            border-top: 1px solid var(--card-border);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 15px 25px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            z-index: 10;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-dark);
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+
+        .status-dot.active {
+            background-color: #30d158;
+            box-shadow: 0 0 10px rgba(48, 209, 88, 0.6);
+        }
+
+        .status-dot.thinking {
+            background-color: #0a84ff;
+            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
+            animation: pulse 1.2s infinite alternate;
+        }
+
+        .status-dot.error {
+            background-color: var(--color-red);
+            box-shadow: 0 0 10px var(--glow-red);
+        }
+
+        /* Big Start/Stop Toggle Button */
+        .btn-toggle {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .btn-toggle.recording {
+            background: #ff3b30;
+            border-color: #ff453a;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.3);
+        }
+
+        .btn-icon-settings {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, transform 0.2s;
+        }
+
+        .btn-icon-settings:hover, .btn-icon-settings:active {
+            color: var(--text-main);
+            transform: rotate(30deg);
+        }
+
+        /* Settings Drawer overlay */
+        .settings-drawer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(12, 12, 12, 0.95);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-top-left-radius: 28px;
+            border-top-right-radius: 28px;
+            z-index: 100;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .settings-drawer.open {
+            transform: translateY(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .drawer-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .btn-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-close:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Form Controls inside Drawer */
+        .form-group {
+            margin-bottom: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .api-key-input-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .api-key-input-container input {
+            flex: 1;
+        }
+
+        .btn-small {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0 15px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-small:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .font-size-val {
+            font-size: 14px;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        /* History preview block */
+        .history-list {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-size: 12px;
+            color: var(--text-dim);
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .history-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            padding-bottom: 4px;
+            word-break: break-all;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .history-empty {
+            text-align: center;
+            padding: 10px;
+            color: var(--text-dark);
+            font-style: italic;
+        }
+
+        .settings-footer {
+            margin-top: 24px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .settings-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #ffffff;
+            color: #000000;
+        }
+
+        .btn-primary:active {
+            background: #dddddd;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 15px rgba(10, 132, 255, 0.8);
+            }
+        }
+
+        /* Screen Rotate Lock Tips */
+        @media (orientation: landscape) {
+            :root {
+                --font-size-base: 5.5vh;
+            }
+            .controller-bar {
+                padding: 10px 20px 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- API Warning banner if key is not configured -->
+    <div id="api-warning" onclick="toggleSettings(true)" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Gemini APIキーを設定してください（タップして設定）
+    </div>
+
+    <!-- Prompter area -->
+    <div class="prompter-container" onclick="resetVisualCountdownForce()">
+        <div id="prompter-text" class="style-white">
+            会話を開始すると<br>
+            ここに次の発言候補が<br>
+            リアルタイムに表示されます。
+        </div>
+    </div>
+
+    <!-- Thin countdown progress bar for 3s silence -->
+    <div class="progress-bar-container">
+        <div id="silence-progress"></div>
+    </div>
+
+    <!-- Live low-contrast speech preview & debug display -->
+    <div class="live-preview-container">
+        <div id="live-transcript">マイク：待機中</div>
+    </div>
+
+    <!-- Controller Bar -->
+    <div class="controller-bar">
+        <div class="status-indicator">
+            <div id="status-dot" class="status-dot"></div>
+            <span id="status-text">STOPPED</span>
+        </div>
+
+        <button id="btn-start-stop" class="btn-toggle" onclick="toggleRecording()">
+            <svg id="icon-recording" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor"/>
+            </svg>
+            <svg id="icon-idle" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            <span id="btn-text">START</span>
+        </button>
+
+        <button class="btn-icon-settings" onclick="toggleSettings(true)">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Settings Overlay Drawer -->
+    <div id="settings-drawer" class="settings-drawer">
+        <div class="drawer-header">
+            <h3>プロンプター設定</h3>
+            <button class="btn-close" onclick="toggleSettings(false)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-api-key">Gemini API キー</label>
+            <div class="api-key-input-container">
+                <input type="password" id="setting-api-key" placeholder="AIzaSy...">
+                <button class="btn-small" onclick="toggleApiKeyVisibility()">表示</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-model-name">使用モデル</label>
+            <select id="setting-model-name">
+                <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (推奨)</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                <option value="gemini-2-flash">Gemini 2 Flash</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>プロンプター文字サイズ</label>
+            <div class="font-size-controls">
+                <button class="btn-small" onclick="adjustFontSize(-0.5)">縮小 -</button>
+                <div id="font-size-display" class="font-size-val">6.5vw</div>
+                <button class="btn-small" onclick="adjustFontSize(0.5)">拡大 +</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-history-limit">過去ログの保持件数</label>
+            <select id="setting-history-limit">
+                <option value="5">過去5回分の文脈</option>
+                <option value="10" selected>過去10回分の文脈 (推奨)</option>
+                <option value="15">過去15回分の文脈</option>
+                <option value="20">過去20回分の文脈</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-system-prompt">Gemini システムプロンプト</label>
+            <textarea id="setting-system-prompt" rows="5" style="resize: vertical;">あなたは議論のコンテキストを理解し、次にユーザーが発言すべき内容を【最大3行・各行20文字以内】で出力せよ。
+状況に応じて出力の「タグ」を先頭に付与せよ（通常時: [WHITE]、議論迷走時: [YELLOW]、対立・時間寸前: [RED]）。
+前置きや解説テキストは一切排除し、出力フォーマットは必ずタグに続いて発言内容のみとせよ。改行を含めて最大3行以内とすること。
+
+例：
+[WHITE]
+その点については
+賛成意見です。
+次の議題に進みましょう。</textarea>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                会話ログ（裏のメモリ）
+                <button class="btn-small" onclick="clearHistory()" style="background:rgba(255,59,48,0.1); color:#ff453a; border-color:rgba(255,59,48,0.2);">クリア</button>
+            </label>
+            <div id="history-preview" class="history-list">
+                <div class="history-empty">会話履歴はありません。</div>
+            </div>
+        </div>
+
+        <div class="settings-footer">
+            <button class="btn-secondary" onclick="toggleSettings(false)">キャンセル</button>
+            <button class="btn-primary" onclick="saveSettings()">保存して適用</button>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let recognition = null;
+        let isListening = false;
+        let accumulatedSessionText = "";
+        let currentInterimText = "";
+        let conversationHistory = [];
+        let wakeLock = null;
+        
+        // Silence Countdown States
+        let lastSpeechTime = null;
+        let silenceCheckInterval = null;
+        let countdownActive = false;
+        const SILENCE_DURATION_MS = 3000; // 3 seconds
+
+        // Config items
+        let apiKey = "";
+        let fontSizeBase = 6.5; // vw unit
+        let systemPrompt = "";
+        let historyLimit = 10;
+        let modelName = "gemini-2.5-flash";
+
+        // --- Initialization ---
+        window.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            initSpeechRecognition();
+            updateUIState();
+            
+            // Periodically check if API Key warning is needed
+            checkApiKeyStatus();
+
+            // Setup document interaction to regain Wake Lock if lost
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+        });
+
+        // --- Settings Management (localStorage) ---
+        function loadSettings() {
+            apiKey = localStorage.getItem('ai_prompter_api_key') || "";
+            fontSizeBase = parseFloat(localStorage.getItem('ai_prompter_font_size')) || 6.5;
+            historyLimit = parseInt(localStorage.getItem('ai_prompter_history_limit')) || 10;
+            modelName = localStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
+            systemPrompt = localStorage.getItem('ai_prompter_system_prompt') || document.getElementById('setting-system-prompt').value;
+            
+            const localHist = localStorage.getItem('ai_prompter_history');
+            if (localHist) {
+                try {
+                    conversationHistory = JSON.parse(localHist);
+                } catch(e) {
+                    conversationHistory = [];
+                }
+            }
+
+            // Sync with elements
+            document.getElementById('setting-api-key').value = apiKey;
+            document.getElementById('setting-model-name').value = modelName;
+            document.getElementById('setting-history-limit').value = historyLimit;
+            document.getElementById('setting-system-prompt').value = systemPrompt;
+            
+            updateFontStyles();
+            renderHistoryUI();
+        }
+
+        function saveSettings() {
+            const inputKey = document.getElementById('setting-api-key').value.trim();
+            const inputModelName = document.getElementById('setting-model-name').value;
+            const inputLimit = parseInt(document.getElementById('setting-history-limit').value);
+            const inputPrompt = document.getElementById('setting-system-prompt').value.trim();
+
+            apiKey = inputKey;
+            modelName = inputModelName;
+            historyLimit = inputLimit;
+            systemPrompt = inputPrompt;
+
+            localStorage.setItem('ai_prompter_api_key', apiKey);
+            localStorage.setItem('ai_prompter_model_name', modelName);
+            localStorage.setItem('ai_prompter_history_limit', historyLimit);
+            localStorage.setItem('ai_prompter_system_prompt', systemPrompt);
+            
+            checkApiKeyStatus();
+            toggleSettings(false);
+            
+            console.log("Settings saved.");
+        }
+
+        function checkApiKeyStatus() {
+            const warningEl = document.getElementById('api-warning');
+            if (!apiKey) {
+                warningEl.style.display = 'flex';
+            } else {
+                warningEl.style.display = 'none';
+            }
+        }
+
+        function toggleApiKeyVisibility() {
+            const keyInput = document.getElementById('setting-api-key');
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+                event.target.textContent = "隠す";
+            } else {
+                keyInput.type = 'password';
+                event.target.textContent = "表示";
+            }
+        }
+
+        function toggleSettings(open) {
+            const drawer = document.getElementById('settings-drawer');
+            if (open) {
+                // Refresh values just in case
+                document.getElementById('setting-api-key').value = apiKey;
+                document.getElementById('setting-history-limit').value = historyLimit;
+                document.getElementById('setting-system-prompt').value = systemPrompt;
+                renderHistoryUI();
+                drawer.classList.add('open');
+            } else {
+                drawer.classList.remove('open');
+            }
+        }
+
+        function adjustFontSize(delta) {
+            fontSizeBase = Math.max(3.0, Math.min(12.0, fontSizeBase + delta));
+            localStorage.setItem('ai_prompter_font_size', fontSizeBase);
+            updateFontStyles();
+        }
+
+        function updateFontStyles() {
+            document.getElementById('font-size-display').textContent = `${fontSizeBase.toFixed(1)}vw`;
+            document.documentElement.style.setProperty('--font-size-base', `${fontSizeBase}vw`);
+        }
+
+        // --- History Logic ---
+        function renderHistoryUI() {
+            const container = document.getElementById('history-preview');
+            if (conversationHistory.length === 0) {
+                container.innerHTML = '<div class="history-empty">会話履歴はありません。</div>';
+                return;
+            }
+            container.innerHTML = conversationHistory.map((text, index) => 
+                `<div class="history-item"><strong>#${index + 1}:</strong> ${escapeHtml(text)}</div>`
+            ).join('');
+            
+            // Save log internally
+            localStorage.setItem('ai_prompter_history', JSON.stringify(conversationHistory));
+        }
+
+        function clearHistory() {
+            if (confirm("会話ログ（コンテキスト）を消去しますか？")) {
+                conversationHistory = [];
+                localStorage.removeItem('ai_prompter_history');
+                renderHistoryUI();
+            }
+        }
+
+        function escapeHtml(string) {
+            return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        // --- Web Speech API (Speech Recognition) ---
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                updateStatus("NOT SUPPORTED", "error");
+                document.getElementById('live-transcript').textContent = "エラー: Web Speech APIに対応していません。";
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ja-JP';
+
+            recognition.onstart = () => {
+                console.log("Speech recognition started");
+                updateStatus("LISTENING", "active");
+                lastSpeechTime = Date.now();
+                startCountdownLoop();
+                requestWakeLock();
+            };
+
+            recognition.onresult = (event) => {
+                let interimText = "";
+                let newlyFinalizedText = "";
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        newlyFinalizedText += result[0].transcript;
+                    } else {
+                        interimText += result[0].transcript;
+                    }
+                }
+
+                // Append newly finalized text to session buffer
+                if (newlyFinalizedText) {
+                    accumulatedSessionText += newlyFinalizedText + " ";
+                }
+                currentInterimText = interimText;
+
+                // Live preview display
+                const previewEl = document.getElementById('live-transcript');
+                const fullText = (accumulatedSessionText + currentInterimText).trim();
+                
+                if (fullText) {
+                    previewEl.textContent = fullText;
+                    previewEl.classList.add('active');
+                    
+                    // Reset silence timer because user is speaking
+                    lastSpeechTime = Date.now();
+                    countdownActive = true;
+                } else {
+                    previewEl.textContent = "話しかけてください...";
+                    previewEl.classList.remove('active');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                if (event.error === 'not-allowed') {
+                    alert("マイクへのアクセスが許可されていません。ブラウザ設定を確認してください。");
+                    stopRecognition();
+                } else if (event.error === 'aborted') {
+                    // Ignored - triggered when recognition.stop() is called manually
+                } else {
+                    updateStatus(`ERROR (${event.error})`, "error");
+                }
+            };
+
+            recognition.onend = () => {
+                console.log("Speech recognition ended.");
+                if (isListening) {
+                    // Auto-restart to enable continuous hands-free operation
+                    console.log("Auto-restarting speech recognition...");
+                    try {
+                        recognition.start();
+                    } catch (err) {
+                        console.error("Failed to auto-restart speech recognition:", err);
+                    }
+                } else {
+                    updateStatus("STOPPED", "stopped");
+                    document.getElementById('live-transcript').textContent = "マイク：停止中";
+                    document.getElementById('live-transcript').classList.remove('active');
+                    stopCountdownLoop();
+                    releaseWakeLock();
+                }
+            };
+        }
+
+        function toggleRecording() {
+            if (!recognition) {
+                alert("このブラウザは音声認識をサポートしていません。");
+                return;
+            }
+
+            if (isListening) {
+                stopRecognition();
+            } else {
+                startRecognition();
+            }
+        }
+
+        function startRecognition() {
+            isListening = true;
+            accumulatedSessionText = "";
+            currentInterimText = "";
+            
+            // Clean visual countdown
+            const progressEl = document.getElementById('silence-progress');
+            progressEl.style.width = '0%';
+            
+            try {
+                recognition.start();
+                updateUIState();
+            } catch (err) {
+                console.error("Error starting recognition:", err);
+                isListening = false;
+                updateUIState();
+            }
+        }
+
+        function stopRecognition() {
+            isListening = false;
+            updateUIState();
+            try {
+                recognition.stop();
+            } catch (err) {
+                console.error("Error stopping recognition:", err);
+            }
+        }
+
+        // --- Visual Silence Timer Loop ---
+        function startCountdownLoop() {
+            if (silenceCheckInterval) clearInterval(silenceCheckInterval);
+            countdownActive = false;
+            
+            silenceCheckInterval = setInterval(() => {
+                if (!isListening || !lastSpeechTime) return;
+
+                const elapsed = Date.now() - lastSpeechTime;
+                const progressEl = document.getElementById('silence-progress');
+
+                if (countdownActive) {
+                    // Calculate visual progress percentage (starts at 100% when voice detected, decreases to 0% at 3s)
+                    const percent = Math.max(0, 100 - (elapsed / SILENCE_DURATION_MS) * 100);
+                    progressEl.style.width = `${percent}%`;
+
+                    // Update indicator colors based on countdown remaining
+                    if (percent > 40) {
+                        progressEl.style.backgroundColor = '#30d158'; // Green
+                    } else if (percent > 0) {
+                        progressEl.style.backgroundColor = '#ffcc00'; // Yellow
+                    } else {
+                        // 3 seconds passed! Trigger AI request
+                        progressEl.style.backgroundColor = '#ff3b30'; // Red
+                        countdownActive = false;
+                        commitSpeechAndTriggerAI();
+                    }
+                } else {
+                    progressEl.style.width = '0%';
+                }
+            }, 50);
+        }
+
+        function stopCountdownLoop() {
+            if (silenceCheckInterval) {
+                clearInterval(silenceCheckInterval);
+                silenceCheckInterval = null;
+            }
+            const progressEl = document.getElementById('silence-progress');
+            progressEl.style.width = '0%';
+        }
+
+        // User can manually tap the screen to clear/reset the timer or cancel trigger if needed
+        function resetVisualCountdownForce() {
+            if (isListening) {
+                lastSpeechTime = Date.now();
+                countdownActive = true;
+                console.log("Silence countdown reset by tap.");
+            }
+        }
+
+        // --- Commit Speech & Call Gemini API ---
+        function commitSpeechAndTriggerAI() {
+            const finalSpeech = (accumulatedSessionText + currentInterimText).trim();
+            
+            // Clean buffers immediately so we don't double trigger
+            accumulatedSessionText = "";
+            currentInterimText = "";
+            
+            if (!finalSpeech) {
+                console.log("Silence triggered but speech buffer is empty.");
+                return;
+            }
+
+            console.log("3s Silence detected. Committing speech segment:", finalSpeech);
+            
+            // Add to context memory
+            conversationHistory.push(finalSpeech);
+            if (conversationHistory.length > historyLimit) {
+                conversationHistory.shift();
+            }
+            renderHistoryUI();
+
+            // Reset preview text to empty/listening state
+            document.getElementById('live-transcript').textContent = "入力待ち...";
+            document.getElementById('live-transcript').classList.remove('active');
+
+            // Trigger Gemini request
+            sendToGemini();
+        }
+
+        async function sendToGemini() {
+            if (!apiKey) {
+                console.warn("API Key is missing. Cannot fetch Gemini suggestion.");
+                updateStatus("API KEY MISSING", "error");
+                return;
+            }
+
+            if (conversationHistory.length === 0) {
+                console.log("History is empty. Skipping API request.");
+                return;
+            }
+
+            updateStatus("THINKING", "thinking");
+            
+            // Build text context for the prompt, merging the system prompt directly into the user instructions
+            const systemRule = `【システム指示】
+あなたは現在の議論のコンテキスト（以下の会話ログ）を理解し、次にユーザーが発言すべき内容を【最大3行・各行20文字以内】で出力せよ。
+状況に応じて出力の「タグ」を先頭に付与せよ（通常時: [WHITE]、議論迷走時: [YELLOW]、対立・時間寸前: [RED]）。
+前置きや解説テキストは一切排除し、出力フォーマットは必ずタグに続いて発言内容のみとせよ。改行を含めて最大3行以内とすること。
+
+例：
+[WHITE]
+その点については
+賛成意見です。
+次の議題に進みましょう。
+
+------------------------------
+【これまでの会話ログ】`;
+
+            const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
+            const userPromptText = `${systemRule}\n${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
+
+            // Payload without "systemInstruction" at root to ensure 100% API version compatibility
+            const payload = {
+                contents: [
+                    {
+                        role: "user",
+                        parts: [{ text: userPromptText }]
+                    }
+                ],
+                generationConfig: {
+                    temperature: 0.75,
+                    maxOutputTokens: 120
+                }
+            };
+
+            // We will try v1beta first. If it fails, we will try v1.
+            let response = null;
+            let errors = {};
+            const apiVersions = ['v1beta', 'v1'];
+
+            for (const version of apiVersions) {
+                const currentUrl = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${apiKey}`;
+                try {
+                    response = await fetch(currentUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    if (response.ok) {
+                        break; // Success! Break out of loop.
+                    } else {
+                        const errText = await response.text();
+                        let parsedErr = null;
+                        try {
+                            parsedErr = JSON.parse(errText);
+                        } catch(e) {}
+                        
+                        const msg = parsedErr?.error?.message || errText || `Status ${response.status}`;
+                        errors[version] = msg;
+                        console.warn(`Gemini API version ${version} failed:`, msg);
+                    }
+                } catch (e) {
+                    errors[version] = e.message;
+                    console.warn(`Fetch error for version ${version}:`, e);
+                }
+            }
+
+            try {
+                if (!response || !response.ok) {
+                    // Prioritize the error message from the primary v1beta endpoint
+                    const primaryError = errors['v1beta'] || errors['v1'] || "API Request failed";
+                    throw new Error(primaryError);
+                }
+
+                const data = await response.json();
+                const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (aiResponseText) {
+                    parseAndDisplayOutput(aiResponseText);
+                } else {
+                    throw new Error("No response content from Gemini.");
+                }
+                
+                if (isListening) {
+                    updateStatus("LISTENING", "active");
+                } else {
+                    updateStatus("STOPPED", "stopped");
+                }
+            } catch (err) {
+                console.error("Gemini Request Failure:", err);
+                updateStatus("API ERROR", "error");
+                
+                // Show detailed error message on the prompter screen
+                const textEl = document.getElementById('prompter-text');
+                textEl.className = "style-red";
+                
+                // Translate/make known Google API errors action-oriented
+                let displayMsg = err.message;
+                if (displayMsg.includes("API key not valid")) {
+                    displayMsg = "APIキーが無効、または間違っています。Google AI Studioで正しいキーを生成し直してください。";
+                } else if (displayMsg.includes("Generative Language API has not been used") || displayMsg.includes("is disabled")) {
+                    displayMsg = "APIが有効化されていません。Google Cloud Consoleで「Generative Language API」を有効化するか、Google AI Studio（aistudio.google.com）から直接キーを作成し直してください。";
+                } else if (displayMsg.includes("billing")) {
+                    displayMsg = "課金またはクレジット上限エラーです。プロジェクトのステータスを確認してください。";
+                }
+                
+                textEl.textContent = `APIエラーが発生しました:\n\n${displayMsg}\n\n(詳細はブラウザのデベロッパーツール等を確認してください)`;
+            }
+        }
+
+        // --- Parsing AI response ---
+        function parseAndDisplayOutput(rawText) {
+            const textEl = document.getElementById('prompter-text');
+            let content = rawText.trim();
+            
+            let matchedTag = "WHITE"; // Default
+            
+            // Detect and extract tags [WHITE], [YELLOW], [RED]
+            const tagRegex = /^\[(WHITE|YELLOW|RED)\]/i;
+            const match = content.match(tagRegex);
+            
+            if (match) {
+                matchedTag = match[1].toUpperCase();
+                // Strip the tag from the text
+                content = content.replace(tagRegex, '').trim();
+            }
+
+            // Set color class
+            textEl.className = ""; // clear
+            if (matchedTag === "YELLOW") {
+                textEl.classList.add('style-yellow');
+            } else if (matchedTag === "RED") {
+                textEl.classList.add('style-red');
+            } else {
+                textEl.classList.add('style-white');
+            }
+
+            // Display on screen (overwrites old values completely)
+            textEl.textContent = content;
+        }
+
+        // --- UI State Management Helpers ---
+        function updateUIState() {
+            const btn = document.getElementById('btn-start-stop');
+            const btnText = document.getElementById('btn-text');
+            const iconIdle = document.getElementById('icon-idle');
+            const iconRecording = document.getElementById('icon-recording');
+
+            if (isListening) {
+                btn.classList.add('recording');
+                btnText.textContent = "STOP";
+                iconIdle.style.display = 'none';
+                iconRecording.style.display = 'block';
+            } else {
+                btn.classList.remove('recording');
+                btnText.textContent = "START";
+                iconIdle.style.display = 'block';
+                iconRecording.style.display = 'none';
+            }
+        }
+
+        function updateStatus(text, type) {
+            const dot = document.getElementById('status-dot');
+            const label = document.getElementById('status-text');
+            
+            label.textContent = text;
+            dot.className = "status-dot"; // reset
+            
+            if (type === 'active') {
+                dot.classList.add('active');
+            } else if (type === 'thinking') {
+                dot.classList.add('thinking');
+            } else if (type === 'error') {
+                dot.classList.add('error');
+            }
+        }
+
+        // --- Screen Wake Lock API ---
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                console.log("Wake Lock API not supported in this browser.");
+                return;
+            }
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log("Wake Lock acquired successfully.");
+                
+                wakeLock.addEventListener('release', () => {
+                    console.log("Wake Lock was released.");
+                });
+            } catch (err) {
+                console.warn("Failed to request Wake Lock:", err.message);
+            }
+        }
+
+        function releaseWakeLock() {
+            if (wakeLock) {
+                wakeLock.release()
+                    .then(() => {
+                        wakeLock = null;
+                        console.log("Wake Lock cleared.");
+                    })
+                    .catch(err => {
+                        console.error("Error releasing Wake Lock:", err);
+                    });
+            }
+        }
+
+        function handleVisibilityChange() {
+            // Re-acquire wake lock if returning to screen
+            if (document.visibilityState === 'visible' && isListening) {
+                requestWakeLock();
+            }
+        }
+    </script>
+</body>
+</html>
