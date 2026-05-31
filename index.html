@@ -607,6 +607,16 @@
             </div>
         </div>
 
+        <div class="form-group" style="margin-top: 15px;">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                詳細デバッグ情報 (開発者向け)
+                <button class="btn-small" onclick="toggleDebugInfo(event)" style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1);">表示</button>
+            </label>
+            <div id="debug-info-panel" style="display: none; font-size: 11px; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto; word-break: break-all; white-space: pre-wrap; font-family: monospace; color: #888888; line-height: 1.4;">
+                APIリクエストを実行するとここに送受信ログが表示されます。
+            </div>
+        </div>
+
         <div class="settings-footer">
             <button class="btn-secondary" onclick="resetSettingsToDefault()" style="background: rgba(255, 59, 48, 0.1); color: #ff453a; border-color: rgba(255, 59, 48, 0.2);">初期化</button>
             <button class="btn-secondary" onclick="toggleSettings(false)">キャンセル</button>
@@ -746,6 +756,17 @@
                 localStorage.removeItem('ai_prompter_silence_duration');
                 localStorage.removeItem('ai_prompter_history');
                 location.reload();
+            }
+        }
+
+        function toggleDebugInfo(event) {
+            const panel = document.getElementById('debug-info-panel');
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                event.target.textContent = "非表示";
+            } else {
+                panel.style.display = 'none';
+                event.target.textContent = "表示";
             }
         }
 
@@ -1083,6 +1104,12 @@ ${systemPrompt}
             const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
             const userPromptText = `${systemRule}\n${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
 
+            // Update debug panel with prompt
+            const debugPanel = document.getElementById('debug-info-panel');
+            if (debugPanel) {
+                debugPanel.textContent = `=== [SENDING PROMPT] ===\n${userPromptText}\n\n=== [AWAITING RESPONSE] ===`;
+            }
+
             // Payload without "systemInstruction" at root to ensure 100% API version compatibility
             const payload = {
                 contents: [
@@ -1141,6 +1168,9 @@ ${systemPrompt}
                 const aiResponseText = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 
                 if (aiResponseText) {
+                    if (debugPanel) {
+                        debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [RECEIVED RESPONSE] ===\n${aiResponseText}`;
+                    }
                     parseAndDisplayOutput(aiResponseText);
                 } else {
                     throw new Error("No response content from Gemini.");
@@ -1154,6 +1184,10 @@ ${systemPrompt}
             } catch (err) {
                 console.error("Gemini Request Failure:", err);
                 updateStatus("API ERROR", "error");
+                
+                if (debugPanel) {
+                    debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [ERROR] ===\n${err.message}`;
+                }
                 
                 // Show detailed error message on the prompter screen
                 const textEl = document.getElementById('prompter-text');
