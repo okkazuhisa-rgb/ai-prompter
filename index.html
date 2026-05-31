@@ -611,6 +611,36 @@
         let historyLimit = 10;
         let modelName = "gemini-2.5-flash";
 
+        // --- Helper: Deduplicate Speech recognition results (handles Android Chrome duplication bug) ---
+        function mergeSpeechResults(results) {
+            let unified = "";
+            for (let i = 0; i < results.length; ++i) {
+                if (results[i].isFinal) {
+                    const txt = results[i][0].transcript.trim();
+                    if (!txt) continue;
+                    
+                    if (!unified) {
+                        unified = txt;
+                    } else {
+                        // 句読点と空白を除去して正規化比較を行う
+                        const cleanUnified = unified.replace(/[、。．，\s]/g, '');
+                        const cleanTxt = txt.replace(/[、。．，\s]/g, '');
+                        
+                        if (cleanTxt.startsWith(cleanUnified)) {
+                            // 累積による再送（Android Chromeの特有の挙動）：古い部分を包含する新しい結果で上書きする
+                            unified = txt;
+                        } else if (cleanUnified.startsWith(cleanTxt)) {
+                            // より短い古い情報が遅れて再送された場合：無視する
+                        } else {
+                            // 完全に新しい発話ブロック（通常のデスクトップ等）：空白を開けて結合する
+                            unified += " " + txt;
+                        }
+                    }
+                }
+            }
+            return unified;
+        }
+
         // --- Initialization ---
         window.addEventListener('DOMContentLoaded', () => {
             loadSettings();
@@ -767,20 +797,17 @@
             };
 
             recognition.onresult = (event) => {
-                let finalSessionText = "";
                 let interimText = "";
 
-                // Android Chrome等の重複バグを防ぐため、resultIndexを使わず、results配列全体からテキストを再構築する
+                // 未確定テキストのみを抽出して結合
                 for (let i = 0; i < event.results.length; ++i) {
-                    const result = event.results[i];
-                    if (result.isFinal) {
-                        finalSessionText += result[0].transcript + " ";
-                    } else {
-                        interimText += result[0].transcript;
+                    if (!event.results[i].isFinal) {
+                        interimText += event.results[i][0].transcript;
                     }
                 }
 
-                currentSessionFinalText = finalSessionText;
+                // 確定したテキスト部分を重複除去してマージ
+                currentSessionFinalText = mergeSpeechResults(event.results);
                 currentInterimText = interimText;
 
                 // Live preview display
