@@ -83,7 +83,9 @@
             word-break: break-all;
             white-space: pre-wrap;
             transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            width: 100%;
             max-width: 100%;
+            text-align: center;
         }
 
         /* Styling Classes mapped dynamically from tags */
@@ -486,6 +488,7 @@
     <!-- Live low-contrast speech preview & debug display -->
     <div class="live-preview-container">
         <div id="live-transcript">マイク：待機中</div>
+        <div id="debug-response" style="font-size: 11px; color: #555555; margin-top: 4px; max-width: 90%; word-break: break-all; opacity: 0.6;"></div>
     </div>
 
     <!-- Controller Bar -->
@@ -583,6 +586,7 @@
         </div>
 
         <div class="settings-footer">
+            <button class="btn-secondary" onclick="resetSettingsToDefault()" style="background: rgba(255, 59, 48, 0.1); color: #ff453a; border-color: rgba(255, 59, 48, 0.2);">初期化</button>
             <button class="btn-secondary" onclick="toggleSettings(false)">キャンセル</button>
             <button class="btn-primary" onclick="saveSettings()">保存して適用</button>
         </div>
@@ -701,6 +705,18 @@
             toggleSettings(false);
             
             console.log("Settings saved.");
+        }
+
+        function resetSettingsToDefault() {
+            if (confirm("設定を初期値（デフォルト）に戻しますか？")) {
+                localStorage.removeItem('ai_prompter_api_key');
+                localStorage.removeItem('ai_prompter_font_size');
+                localStorage.removeItem('ai_prompter_history_limit');
+                localStorage.removeItem('ai_prompter_system_prompt');
+                localStorage.removeItem('ai_prompter_model_name');
+                localStorage.removeItem('ai_prompter_history');
+                location.reload();
+            }
         }
 
         function checkApiKeyStatus() {
@@ -1108,6 +1124,12 @@ ${systemPrompt}
         function parseAndDisplayOutput(rawText) {
             const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
+            
+            // Output raw API response to debug area
+            const debugEl = document.getElementById('debug-response');
+            if (debugEl) {
+                debugEl.textContent = `Raw API: "${rawText.replace(/\n/g, '\\n')}"`;
+            }
             
             // 1. マークダウンのコードブロック囲み (```json や ```markdown 等) を除去
             content = content.replace(/^```[a-zA-Z]*\n/, '');
