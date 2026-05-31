@@ -78,14 +78,20 @@
         #prompter-text {
             font-size: var(--font-size-base);
             font-weight: 900;
-            line-height: 1.35;
-            letter-spacing: -0.02em;
+            line-height: 1.4;
+            letter-spacing: -0.018em;
             word-break: break-all;
             white-space: pre-wrap;
-            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
             width: 100%;
             max-width: 100%;
             text-align: center;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #prompter-text.transitioning {
+            opacity: 0;
+            transform: translateY(12px);
         }
 
         /* Styling Classes mapped dynamically from tags */
@@ -457,18 +463,99 @@
             :root {
                 --font-size-base: 5.5vh;
             }
-            .controller-bar {
-                padding: 10px 20px 15px;
-            }
+        /* Edge Glow Overlays */
+        .edge-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            transition: box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.0);
+        }
+        .edge-glow.glow-white {
+            box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.22);
+        }
+        .edge-glow.glow-yellow {
+            box-shadow: inset 0 0 40px rgba(255, 204, 0, 0.3);
+        }
+        .edge-glow.glow-red {
+            box-shadow: inset 0 0 40px rgba(255, 59, 48, 0.35);
+        }
+
+        /* AI Persona Tabs */
+        .persona-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px 10px 8px;
+            z-index: 10;
+        }
+        .persona-tab {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-dim);
+            padding: 8px 18px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .persona-tab.active {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.05);
+            transform: translateY(-1px);
+        }
+
+        /* TTS Icon Toggle styles */
+        .btn-icon-tts {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .btn-icon-tts:hover, .btn-icon-tts:active {
+            color: var(--text-main);
+            transform: scale(1.1);
+        }
+        .btn-icon-tts.active {
+            color: #30d158;
+            text-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
+        }
+        
+        /* Layout fixes for alignment */
+        .prompter-container {
+            flex-direction: column;
+            justify-content: center;
         }
     </style>
 </head>
 <body>
 
+    <!-- Edge Glow Inset Screen Shadow -->
+    <div id="edge-glow" class="edge-glow"></div>
+
     <!-- API Warning banner if key is not configured -->
     <div id="api-warning" onclick="toggleSettings(true)" style="display: none;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Gemini APIキーを設定してください（タップして設定）
+    </div>
+
+    <!-- AI Persona Selector Tabs -->
+    <div class="persona-tabs">
+        <div id="tab-debate" class="persona-tab active" onclick="switchPersona('debate')">戦略参謀</div>
+        <div id="tab-brainstorm" class="persona-tab" onclick="switchPersona('brainstorm')">アイデア発想</div>
+        <div id="tab-facilitate" class="persona-tab" onclick="switchPersona('facilitate')">進行・要約</div>
     </div>
 
     <!-- Prompter area -->
@@ -506,6 +593,19 @@
                 <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
             </svg>
             <span id="btn-text">START</span>
+        </button>
+
+        <button id="btn-tts" class="btn-icon-tts" onclick="toggleTts()" title="音声読み上げ">
+            <svg id="icon-tts-off" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="22" y1="9" x2="16" y2="15"/>
+                <line x1="16" y1="9" x2="22" y2="15"/>
+            </svg>
+            <svg id="icon-tts-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
         </button>
 
         <button class="btn-icon-settings" onclick="toggleSettings(true)">
@@ -648,6 +748,58 @@
         let modelName = "gemini-2.5-flash";
         let silenceDuration = 2.0; // 秒（デフォルト2.0秒）
 
+        // Advanced Config & States
+        let activePersona = "debate";
+        let isTtsEnabled = false;
+
+        const PERSONA_CONFIGS = {
+            debate: {
+                name: "戦略参謀",
+                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略参謀（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+
+【ルール】
+1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
+2. ユーザーがその場で口にすることで、議論のレベルが一気に上がるような「具体的な根拠、対立軸の指摘、懸念点、あるいは代替案」を提案してください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+
+【タグの選定基準】
+- [WHITE] ：鋭い指摘、納得感のある根拠、建設的な提案、本質を突く質問。
+- [YELLOW]：議論が本質から脱線している際、本質的なアジェンダに強引に引き戻すための切り口。
+- [RED]    ：対立が起きている際、相手の主張の矛盾を突くカウンター、または決定的な妥協案。`,
+                tag: "WHITE"
+            },
+            brainstorm: {
+                name: "アイデア発想",
+                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期せぬアナロジー」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+
+【ルール】
+1. 当たり前の意見やオウム返しは【絶対に禁止】です。
+2. ユーザーの発想を大きく広げるための「斬新な切り口、他業界のモデルの応用、またはユニークな疑問」を提案してください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+
+【タグの選定基準】
+- [WHITE] ：ユニークな着想、発展性のあるアイデア、面白い仮説。
+- [YELLOW]：前提条件を疑うクリティカルな質問、別角度からのアナロジー。
+- [RED]    ：トレードオフを打破するウルトラC的な解決策、破壊的な代替プラン。`,
+                tag: "WHITE"
+            },
+            facilitate: {
+                name: "進行・要約",
+                prompt: `あなたは会議を円滑に進め、全員の知恵を引き出す超優秀な「ファシリテーター（対話促進役）」です。会話ログを分析し、対立を和らげて合意形成に向かわせるための「論点の整理、対立点の昇華（アウフヘーベン）、議論を前に進めるための良い問いかけ」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+
+【ルール】
+1. 単に話を聞き流すだけや、「どうぞ」といった単調なオウム返しは【絶対に禁止】です。
+2. 对立する意見の共通点を見出したり、アジェンダに戻したり、誰もが納得しやすい折衷案を提示してください。
+3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
+
+【タグの選定基準】
+- [WHITE] ：現在の議論の要点整理、次に合意すべきアジェンダの提示。
+- [YELLOW]：沈黙や停滞を打破する論点整理の問いかけ、またはアジェンダ引き戻し。
+- [RED]    ：対立する意見を統合する折衷案、または着地点の提案。`,
+                tag: "WHITE"
+            }
+        };
+
         // --- Helper: Deduplicate Speech recognition results (handles Android Chrome duplication bug) ---
         function mergeSpeechResults(results) {
             let unified = "";
@@ -683,6 +835,7 @@
             loadSettings();
             initSpeechRecognition();
             updateUIState();
+            setupSwipeGestures();
             
             // Periodically check if API Key warning is needed
             checkApiKeyStatus();
@@ -698,7 +851,11 @@
             historyLimit = parseInt(localStorage.getItem('ai_prompter_history_limit')) || 10;
             modelName = localStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
             silenceDuration = parseFloat(localStorage.getItem('ai_prompter_silence_duration')) || 2.0;
-            systemPrompt = localStorage.getItem('ai_prompter_system_prompt') || document.getElementById('setting-system-prompt').value;
+            
+            activePersona = localStorage.getItem('ai_prompter_active_persona') || "debate";
+            isTtsEnabled = localStorage.getItem('ai_prompter_tts_enabled') === 'true';
+            
+            systemPrompt = localStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || PERSONA_CONFIGS[activePersona].prompt;
             
             const localHist = localStorage.getItem('ai_prompter_history');
             if (localHist) {
@@ -717,6 +874,27 @@
             document.getElementById('setting-silence-duration').value = silenceDuration;
             document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
             
+            // Sync persona tabs
+            document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${activePersona}`);
+            if (activeTab) activeTab.classList.add('active');
+
+            // Sync TTS button state
+            const ttsBtn = document.getElementById('btn-tts');
+            const ttsOff = document.getElementById('icon-tts-off');
+            const ttsOn = document.getElementById('icon-tts-on');
+            if (ttsBtn) {
+                if (isTtsEnabled) {
+                    ttsBtn.classList.add('active');
+                    if (ttsOff) ttsOff.style.display = 'none';
+                    if (ttsOn) ttsOn.style.display = 'block';
+                } else {
+                    ttsBtn.classList.remove('active');
+                    if (ttsOff) ttsOff.style.display = 'block';
+                    if (ttsOn) ttsOn.style.display = 'none';
+                }
+            }
+
             updateFontStyles();
             renderHistoryUI();
         }
@@ -737,8 +915,10 @@
             localStorage.setItem('ai_prompter_api_key', apiKey);
             localStorage.setItem('ai_prompter_model_name', modelName);
             localStorage.setItem('ai_prompter_history_limit', historyLimit);
-            localStorage.setItem('ai_prompter_system_prompt', systemPrompt);
             localStorage.setItem('ai_prompter_silence_duration', silenceDuration);
+            
+            // Save prompt for the active persona specifically
+            localStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
             
             checkApiKeyStatus();
             toggleSettings(false);
@@ -914,9 +1094,15 @@
                 console.log("Speech recognition ended.");
                 if (isListening) {
                     // セッションが自動切断＆再起動される際、現在セッションで確定しているテキストを過去バッファに退避する
-                    accumulatedPastText += currentSessionFinalText;
+                    accumulatedPastText += " " + currentSessionFinalText;
                     currentSessionFinalText = "";
                     currentInterimText = "";
+
+                    // 過去ログバッファが長すぎる（例えば1000文字以上）場合、最新の500文字程度のみを残してトリミングする
+                    if (accumulatedPastText.length > 1000) {
+                        console.log("Speech recognition buffer too long, trimming...");
+                        accumulatedPastText = accumulatedPastText.substring(accumulatedPastText.length - 500);
+                    }
 
                     // Auto-restart to enable continuous hands-free operation
                     console.log("Auto-restarting speech recognition...");
@@ -1291,23 +1477,189 @@ ${systemPrompt}
                 content = content.substring(endIndex).trim();
             }
 
-            // 3. スタイルの適用
-            textEl.className = ""; // クラスを一度クリア
-            if (matchedTag === "YELLOW") {
-                textEl.classList.add('style-yellow');
-            } else if (matchedTag === "RED") {
-                textEl.classList.add('style-red');
-            } else {
-                textEl.classList.add('style-white');
-            }
-
-            // 4. 空の応答へのフォールバック
+            // 3. 空の応答へのフォールバック
             if (!content) {
                 content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
             }
 
-            // 5. 極大テキストとして表示
-            textEl.textContent = content;
+            // 4. アニメーション・スケール・TTS適用の表示ロジックへ
+            updateTextWithScale(content, matchedTag);
+        }
+
+        // --- Dynamic scaling, Transitions, Edge Glow, and Speech Output ---
+        function updateTextWithScale(content, matchedTag) {
+            const textEl = document.getElementById('prompter-text');
+            const glowEl = document.getElementById('edge-glow');
+            if (!textEl || !glowEl) return;
+
+            // アニメーション用に一時的にクラスを付与 (fade-out + slide-down)
+            textEl.classList.add('transitioning');
+            
+            setTimeout(() => {
+                // スタイルの適用
+                textEl.className = ""; // クラスをリセット
+                
+                let glowClass = "glow-white";
+                if (matchedTag === "YELLOW") {
+                    textEl.classList.add('style-yellow');
+                    glowClass = "glow-yellow";
+                } else if (matchedTag === "RED") {
+                    textEl.classList.add('style-red');
+                    glowClass = "glow-red";
+                } else {
+                    textEl.classList.add('style-white');
+                }
+
+                // 画面外周の発光エフェクトの更新
+                glowEl.className = `edge-glow ${glowClass}`;
+
+                // 文字数に応じたオートスケールロジック (1〜200文字に対応)
+                let scale = 1.0;
+                const length = content.length;
+                if (length > 150) {
+                    scale = 0.55; // 非常に長い場合はフォントサイズを元の 55% に
+                } else if (length > 100) {
+                    scale = 0.65;
+                } else if (length > 60) {
+                    scale = 0.8;
+                } else if (length > 30) {
+                    scale = 0.9;
+                }
+                
+                const calculatedSize = fontSizeBase * scale;
+                textEl.style.fontSize = `${calculatedSize}vw`;
+                
+                // テキストの反映とアニメーション復帰 (fade-in + slide-up)
+                textEl.textContent = content;
+                
+                // 画面読み上げを実行
+                if (isTtsEnabled) {
+                    speakText(content);
+                }
+            }, 200); // transitioning のCSSトランジション時間に合わせる
+        }
+
+        // --- Swipe Gestures & Swipe Persona Switching ---
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        function setupSwipeGestures() {
+            const container = document.querySelector('.prompter-container');
+            if (!container) return;
+            
+            container.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+            
+            container.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipeGesture();
+            }, { passive: true });
+        }
+
+        function handleSwipeGesture() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Y軸の移動量が少なく、X軸の移動量が十分に大きい(60px以上)場合のみ横スワイプと判定
+            if (Math.abs(deltaX) > 60 && Math.abs(deltaY) < 60) {
+                const personas = ['debate', 'brainstorm', 'facilitate'];
+                let currentIndex = personas.indexOf(activePersona);
+                
+                if (deltaX > 0) {
+                    // 右スワイプ -> 前のペルソナ
+                    currentIndex = (currentIndex - 1 + personas.length) % personas.length;
+                } else {
+                    // 左スワイプ -> 次のペルソナ
+                    currentIndex = (currentIndex + 1) % personas.length;
+                }
+                switchPersona(personas[currentIndex]);
+            }
+        }
+
+        function switchPersona(persona) {
+            if (activePersona === persona) return;
+            activePersona = persona;
+            localStorage.setItem('ai_prompter_active_persona', activePersona);
+            
+            // タブ表示の更新
+            document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${persona}`);
+            if (activeTab) activeTab.classList.add('active');
+            
+            // システムプロンプト編集エリアとグローバル変数の同期
+            systemPrompt = localStorage.getItem(`ai_prompter_system_prompt_${persona}`) || PERSONA_CONFIGS[persona].prompt;
+            document.getElementById('setting-system-prompt').value = systemPrompt;
+            
+            // 一時的にグローエフェクトを点滅させて切り替えを通知
+            const glowEl = document.getElementById('edge-glow');
+            if (glowEl) {
+                glowEl.className = 'edge-glow';
+                setTimeout(() => {
+                    const tagColor = PERSONA_CONFIGS[persona].tag.toLowerCase();
+                    glowEl.classList.add(`glow-${tagColor}`);
+                }, 50);
+            }
+            
+            // UI上のプロンプター文字をペルソナ切り替えに合わせて一時リセット/案内表示
+            const textEl = document.getElementById('prompter-text');
+            if (textEl) {
+                textEl.style.fontSize = `${fontSizeBase}vw`;
+                textEl.className = "style-white";
+                textEl.innerHTML = `${PERSONA_CONFIGS[persona].name}モードに切り替えました。<br>話しかけるとこのモードで提案を生成します。`;
+            }
+
+            console.log(`Persona switched to: ${persona}`);
+        }
+
+        // --- Text-to-Speech (TTS) Engine ---
+        function toggleTts() {
+            isTtsEnabled = !isTtsEnabled;
+            localStorage.setItem('ai_prompter_tts_enabled', isTtsEnabled);
+            
+            const btn = document.getElementById('btn-tts');
+            const iconOff = document.getElementById('icon-tts-off');
+            const iconOn = document.getElementById('icon-tts-on');
+            
+            if (isTtsEnabled) {
+                if (btn) btn.classList.add('active');
+                if (iconOff) iconOff.style.display = 'none';
+                if (iconOn) iconOn.style.display = 'block';
+                speakText("読み上げを有効にしました");
+            } else {
+                if (btn) btn.classList.remove('active');
+                if (iconOff) iconOff.style.display = 'block';
+                if (iconOn) iconOn.style.display = 'none';
+                window.speechSynthesis.cancel(); // 読み上げ中なら停止
+            }
+        }
+
+        function speakText(text) {
+            if (!isTtsEnabled || !('speechSynthesis' in window)) return;
+            
+            window.speechSynthesis.cancel(); // 進行中の発話をキャンセル
+            
+            let cleanText = text.trim();
+            if (!cleanText) return;
+            
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'ja-JP';
+            
+            // 最適な日本語の音声を使用
+            const voices = window.speechSynthesis.getVoices();
+            const jaVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang.startsWith('ja'));
+            if (jaVoice) {
+                utterance.voice = jaVoice;
+            }
+            
+            utterance.rate = 1.15; // テンポよく読み上げるため少し早め
+            utterance.pitch = 1.0;
+            
+            window.speechSynthesis.speak(utterance);
         }
 
         // --- UI State Management Helpers ---
