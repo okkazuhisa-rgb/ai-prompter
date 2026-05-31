@@ -1110,7 +1110,7 @@ ${systemPrompt}
                 debugPanel.textContent = `=== [SENDING PROMPT] ===\n${userPromptText}\n\n=== [AWAITING RESPONSE] ===`;
             }
 
-            // Payload with maxOutputTokens increased to 250 and safetySettings set to BLOCK_NONE
+            // Payload with maxOutputTokens increased to 1000 and safetySettings set to BLOCK_NONE
             const payload = {
                 contents: [
                     {
@@ -1120,7 +1120,7 @@ ${systemPrompt}
                 ],
                 generationConfig: {
                     temperature: 0.75,
-                    maxOutputTokens: 250
+                    maxOutputTokens: 1000
                 },
                 safetySettings: [
                     {
@@ -1141,6 +1141,13 @@ ${systemPrompt}
                     }
                 ]
             };
+
+            // gemini-2.5 系のモデルの場合、思考プロセスを無効化（低レイテンシー化）する
+            if (modelName.startsWith("gemini-2.5")) {
+                payload.generationConfig.thinkingConfig = {
+                    thinkingBudget: 0
+                };
+            }
 
             // We will try v1beta first. If it fails, we will try v1.
             let response = null;
