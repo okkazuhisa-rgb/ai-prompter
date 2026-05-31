@@ -1007,19 +1007,10 @@
             
             // Build text context for the prompt, merging the system prompt directly into the user instructions
             const systemRule = `【システム指示】
-あなたは現在の議論のコンテキスト（以下の会話ログ）を理解し、次にユーザーが発言すべき内容を【最大3行・各行20文字以内】で出力せよ。
-状況に応じて出力の「タグ」を先頭に付与せよ（通常時: [WHITE]、議論迷走時: [YELLOW]、対立・時間寸前: [RED]）。
-前置きや解説テキストは一切排除し、出力フォーマットは必ずタグに続いて発言内容のみとせよ。改行を含めて最大3行以内とすること。
-
-例：
-[WHITE]
-その点については
-賛成意見です。
-次の議題に進みましょう。
+${systemPrompt}
 
 ------------------------------
 【これまでの会話ログ】`;
-
             const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
             const userPromptText = `${systemRule}\n${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
 
@@ -1118,20 +1109,25 @@
             const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
             
-            let matchedTag = "WHITE"; // Default
+            // 1. マークダウンのコードブロック囲み (```json や ```markdown 等) を除去
+            content = content.replace(/^```[a-zA-Z]*\n/, '');
+            content = content.replace(/\n```$/, '');
+            content = content.replace(/```/g, '').trim();
+
+            let matchedTag = "WHITE"; // デフォルトの色は白
+
+            // 2. 文中から [WHITE], [YELLOW], [RED] のタグを探索する
+            const tagMatch = content.match(/\[(WHITE|YELLOW|RED)\]/i);
             
-            // Detect and extract tags [WHITE], [YELLOW], [RED]
-            const tagRegex = /^\[(WHITE|YELLOW|RED)\]/i;
-            const match = content.match(tagRegex);
-            
-            if (match) {
-                matchedTag = match[1].toUpperCase();
-                // Strip the tag from the text
-                content = content.replace(tagRegex, '').trim();
+            if (tagMatch) {
+                matchedTag = tagMatch[1].toUpperCase();
+                // タグの出現位置を取得し、タグより前にあるテキスト（前置きの文章など）をすべてカットする
+                const tagIndex = content.indexOf(tagMatch[0]);
+                content = content.substring(tagIndex + tagMatch[0].length).trim();
             }
 
-            // Set color class
-            textEl.className = ""; // clear
+            // 3. スタイルの適用
+            textEl.className = ""; // クラスを一度クリア
             if (matchedTag === "YELLOW") {
                 textEl.classList.add('style-yellow');
             } else if (matchedTag === "RED") {
@@ -1140,7 +1136,7 @@
                 textEl.classList.add('style-white');
             }
 
-            // Display on screen (overwrites old values completely)
+            // 4. 極大テキストとして表示
             textEl.textContent = content;
         }
 
