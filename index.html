@@ -1945,15 +1945,15 @@ ${systemPrompt}${contextPrompt}
             const iconRecording = document.getElementById('icon-recording');
 
             if (isListening) {
-                btn.classList.add('recording');
-                btnText.textContent = "STOP";
-                iconIdle.style.display = 'none';
-                iconRecording.style.display = 'block';
+                if (btn) btn.classList.add('recording');
+                if (btnText) btnText.textContent = "STOP";
+                if (iconIdle) iconIdle.style.display = 'none';
+                if (iconRecording) iconRecording.style.display = 'block';
             } else {
-                btn.classList.remove('recording');
-                btnText.textContent = "START";
-                iconIdle.style.display = 'block';
-                iconRecording.style.display = 'none';
+                if (btn) btn.classList.remove('recording');
+                if (btnText) btnText.textContent = "START";
+                if (iconIdle) iconIdle.style.display = 'block';
+                if (iconRecording) iconRecording.style.display = 'none';
             }
         }
 
