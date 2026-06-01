@@ -425,6 +425,42 @@
             font-style: italic;
         }
 
+        .ai-history-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 8px 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .ai-history-item:hover, .ai-history-item:active {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+        }
+
+        .ai-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .ai-history-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .ai-history-text {
+            font-size: 13px;
+            color: #ffffff;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-all;
+            text-align: left;
+        }
+
+
         .settings-footer {
             margin-top: 24px;
             display: flex;
@@ -634,7 +670,6 @@
     <!-- Live low-contrast speech preview & debug display -->
     <div class="live-preview-container">
         <div id="live-transcript">マイク：待機中</div>
-        <div id="debug-response" style="font-size: 11px; color: #555555; margin-top: 4px; max-width: 90%; word-break: break-all; opacity: 0.6;"></div>
     </div>
 
     <!-- Controller Bar -->
@@ -773,6 +808,16 @@
 
         <div class="form-group">
             <label style="display:flex; justify-content:space-between; align-items:center;">
+                提案履歴（タップで再表示）
+                <button class="btn-small" onclick="clearAiHistory()" style="background:rgba(255,59,48,0.1); color:#ff453a; border-color:rgba(255,59,48,0.2);">クリア</button>
+            </label>
+            <div id="ai-history-preview" class="history-list" style="max-height: 180px;">
+                <div class="history-empty">提案履歴はありません。</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label style="display:flex; justify-content:space-between; align-items:center;">
                 会話ログ（裏のメモリ）
                 <button class="btn-small" onclick="clearHistory()" style="background:rgba(255,59,48,0.1); color:#ff453a; border-color:rgba(255,59,48,0.2);">クリア</button>
             </label>
@@ -845,6 +890,7 @@
         let currentSessionFinalText = ""; // 現在のセッションで確定したテキスト
         let currentInterimText = ""; // 現在のセッションの未確定テキスト（一時保存）
         let conversationHistory = [];
+        let aiSuggestionsHistory = [];
         let wakeLock = null;
         
         // Silence Countdown States
@@ -1016,6 +1062,20 @@
                 }
             }
 
+            const savedAiHist = safeStorage.getItem('ai_prompter_ai_history');
+            if (savedAiHist) {
+                try {
+                    const parsed = JSON.parse(savedAiHist);
+                    if (Array.isArray(parsed)) {
+                        aiSuggestionsHistory = parsed;
+                    } else {
+                        aiSuggestionsHistory = [];
+                    }
+                } catch(e) {
+                    aiSuggestionsHistory = [];
+                }
+            }
+
             // Sync with elements
             document.getElementById('setting-api-key').value = apiKey;
             document.getElementById('setting-model-name').value = modelName;
@@ -1048,6 +1108,7 @@
 
             updateFontStyles();
             renderHistoryUI();
+            renderAiHistoryUI();
         }
 
         function saveSettings() {
@@ -1091,6 +1152,7 @@
                 safeStorage.removeItem('ai_prompter_silence_duration');
                 safeStorage.removeItem('ai_prompter_history');
                 safeStorage.removeItem('ai_prompter_context_doc');
+                safeStorage.removeItem('ai_prompter_ai_history');
                 location.reload();
             }
         }
@@ -1229,6 +1291,7 @@
                 document.getElementById('setting-system-prompt').value = systemPrompt;
                 document.getElementById('setting-context-doc').value = contextDoc;
                 renderHistoryUI();
+                renderAiHistoryUI();
                 drawer.classList.add('open');
             } else {
                 drawer.classList.remove('open');
@@ -1273,6 +1336,54 @@
                 conversationHistory = [];
                 safeStorage.removeItem('ai_prompter_history');
                 renderHistoryUI();
+            }
+        }
+
+        function renderAiHistoryUI() {
+            const container = document.getElementById('ai-history-preview');
+            if (!container) return;
+            if (aiSuggestionsHistory.length === 0) {
+                container.innerHTML = '<div class="history-empty">提案履歴はありません。</div>';
+                return;
+            }
+            container.innerHTML = aiSuggestionsHistory.map((item, index) => {
+                let tagColorStyle = 'color: var(--text-dim);';
+                if (item.tag === 'YELLOW') {
+                    tagColorStyle = 'color: var(--color-yellow);';
+                } else if (item.tag === 'RED') {
+                    tagColorStyle = 'color: var(--color-red);';
+                } else if (item.tag === 'WHITE') {
+                    tagColorStyle = 'color: var(--color-white);';
+                }
+                
+                return `
+                    <div class="ai-history-item" onclick="restoreAiSuggestion(${index})">
+                        <div class="ai-history-meta">
+                            <span style="color: rgba(255, 255, 255, 0.6);">${escapeHtml(item.persona)}</span>
+                            <span style="${tagColorStyle} font-weight: 800;">[${escapeHtml(item.tag)}] ${escapeHtml(item.time)}</span>
+                        </div>
+                        <div class="ai-history-text">${escapeHtml(item.text)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function restoreAiSuggestion(index) {
+            if (index < 0 || index >= aiSuggestionsHistory.length) return;
+            const item = aiSuggestionsHistory[index];
+            
+            // Close settings drawer so user can see it on main screen
+            toggleSettings(false);
+            
+            // Update text with scale and transitions
+            updateTextWithScale(item.text, item.tag);
+        }
+
+        function clearAiHistory() {
+            if (confirm("提案履歴を消去しますか？")) {
+                aiSuggestionsHistory = [];
+                safeStorage.removeItem('ai_prompter_ai_history');
+                renderAiHistoryUI();
             }
         }
 
@@ -1689,12 +1800,6 @@ ${systemPrompt}${contextPrompt}
             const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
             
-            // Output raw API response to debug area
-            const debugEl = document.getElementById('debug-response');
-            if (debugEl) {
-                debugEl.textContent = `Raw API: "${rawText.replace(/\n/g, '\\n')}"`;
-            }
-            
             // 1. マークダウンのコードブロック囲み (```json や ```markdown 等) を除去
             content = content.replace(/^```[a-zA-Z]*\n/, '');
             content = content.replace(/\n```$/, '');
@@ -1741,7 +1846,22 @@ ${systemPrompt}${contextPrompt}
                 content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
             }
 
-            // 4. アニメーション・スケール・TTS適用の表示ロジックへ
+            // 4. 提案履歴へ追加して保存
+            const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const personaName = PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].name : activePersona;
+            aiSuggestionsHistory.unshift({
+                persona: personaName,
+                tag: matchedTag,
+                text: content,
+                time: timestamp
+            });
+            if (aiSuggestionsHistory.length > 20) {
+                aiSuggestionsHistory.pop();
+            }
+            safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
+            renderAiHistoryUI();
+
+            // 5. アニメーション・スケール・TTS適用の表示ロジックへ
             updateTextWithScale(content, matchedTag);
         }
 
