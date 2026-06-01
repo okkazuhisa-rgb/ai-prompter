@@ -2,6 +2,8 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <!-- PDF.js for on-device PDF text extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -679,6 +681,19 @@
         </div>
 
         <div class="form-group">
+            <label for="setting-context-doc">会議の前提資料・アジェンダ等（任意）</label>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px;">
+                <input type="file" id="setting-file-input" accept=".txt,.md,.csv,.pdf" style="display: none;" onchange="handleFileAttachment(this)">
+                <button class="btn-secondary" onclick="document.getElementById('setting-file-input').click()" style="padding: 8px 12px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border-radius: 8px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.1);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    ファイルを添付 (TXT, MD, CSV, PDF)
+                </button>
+                <span id="file-upload-status" style="font-size: 11px; color: var(--text-dim);"></span>
+            </div>
+            <textarea id="setting-context-doc" rows="4" placeholder="資料から読み込まれた内容や、アジェンダなどをここに貼り付けて編集します。" style="resize: vertical;"></textarea>
+        </div>
+
+        <div class="form-group">
             <label for="setting-system-prompt">Gemini システムプロンプト</label>
             <textarea id="setting-system-prompt" rows="5" style="resize: vertical;">あなたはユーザーの思考と発言を強化する超優秀な「戦略参謀（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【最大3行・各行20文字以内】で作成してください。
 
@@ -798,6 +813,7 @@
         // Advanced Config & States
         let activePersona = "debate";
         let isTtsEnabled = false;
+        let contextDoc = ""; // 会議前提資料のテキスト
 
         const PERSONA_CONFIGS = {
             debate: {
@@ -933,6 +949,7 @@
             
             isTtsEnabled = safeStorage.getItem('ai_prompter_tts_enabled') === 'true';
             systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || (PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].prompt : "");
+            contextDoc = safeStorage.getItem('ai_prompter_context_doc') || "";
             
             const localHist = safeStorage.getItem('ai_prompter_history');
             if (localHist) {
@@ -953,6 +970,7 @@
             document.getElementById('setting-model-name').value = modelName;
             document.getElementById('setting-history-limit').value = historyLimit;
             document.getElementById('setting-system-prompt').value = systemPrompt;
+            document.getElementById('setting-context-doc').value = contextDoc;
             document.getElementById('setting-silence-duration').value = silenceDuration;
             document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
             
@@ -988,16 +1006,20 @@
             const inputPrompt = document.getElementById('setting-system-prompt').value.trim();
             const inputSilence = parseFloat(document.getElementById('setting-silence-duration').value);
 
+            const inputContextDoc = document.getElementById('setting-context-doc').value.trim();
+
             apiKey = inputKey;
             modelName = inputModelName;
             historyLimit = inputLimit;
             systemPrompt = inputPrompt;
             silenceDuration = inputSilence;
+            contextDoc = inputContextDoc;
 
             safeStorage.setItem('ai_prompter_api_key', apiKey);
             safeStorage.setItem('ai_prompter_model_name', modelName);
             safeStorage.setItem('ai_prompter_history_limit', historyLimit);
             safeStorage.setItem('ai_prompter_silence_duration', silenceDuration);
+            safeStorage.setItem('ai_prompter_context_doc', contextDoc);
             
             // Save prompt for the active persona specifically
             safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
@@ -1017,6 +1039,7 @@
                 safeStorage.removeItem('ai_prompter_model_name');
                 safeStorage.removeItem('ai_prompter_silence_duration');
                 safeStorage.removeItem('ai_prompter_history');
+                safeStorage.removeItem('ai_prompter_context_doc');
                 location.reload();
             }
         }
@@ -1060,6 +1083,92 @@
             }
         }
 
+        // --- File Attachment Handler (On-device text extraction) ---
+        async function handleFileAttachment(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const statusEl = document.getElementById('file-upload-status');
+            const textareaEl = document.getElementById('setting-context-doc');
+            if (statusEl) {
+                statusEl.textContent = "ファイルを解析中...";
+                statusEl.style.color = "#ffcc00";
+            }
+
+            const extension = file.name.split('.').pop().toLowerCase();
+
+            try {
+                if (extension === 'pdf') {
+                    if (typeof pdfjsLib === 'undefined') {
+                        throw new Error("PDF解析ライブラリが読み込まれていません。インターネット接続を確認してください。");
+                    }
+
+                    const arrayBuffer = await readFileAsArrayBuffer(file);
+                    
+                    // Setup PDF.js worker
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+                    
+                    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                    let fullText = "";
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const textContent = await page.getTextContent();
+                        const pageText = textContent.items.map(item => item.str).join(' ');
+                        fullText += pageText + '\n';
+                    }
+                    
+                    if (textareaEl) {
+                        textareaEl.value = (textareaEl.value.trim() ? textareaEl.value + '\n\n' : '') + `=== 添付資料 [PDF]: ${file.name} ===\n` + fullText.trim();
+                        textareaEl.dispatchEvent(new Event('input'));
+                    }
+                    
+                    if (statusEl) {
+                        statusEl.textContent = `PDF解析に成功しました: ${file.name} (${pdf.numPages}ページ)`;
+                        statusEl.style.color = "#30d158";
+                    }
+                } else if (['txt', 'md', 'csv', 'json', 'html'].includes(extension)) {
+                    const text = await readFileAsText(file);
+                    if (textareaEl) {
+                        textareaEl.value = (textareaEl.value.trim() ? textareaEl.value + '\n\n' : '') + `=== 添付資料: ${file.name} ===\n` + text.trim();
+                        textareaEl.dispatchEvent(new Event('input'));
+                    }
+                    if (statusEl) {
+                        statusEl.textContent = `添付ファイルを読み込みました: ${file.name}`;
+                        statusEl.style.color = "#30d158";
+                    }
+                } else {
+                    throw new Error("サポートされていないファイル形式です。TXT, MD, CSV, PDFファイルを添付してください。");
+                }
+            } catch (err) {
+                console.error("File loading error:", err);
+                if (statusEl) {
+                    statusEl.textContent = `エラー: ${err.message}`;
+                    statusEl.style.color = "#ff3b30";
+                }
+            } finally {
+                input.value = "";
+            }
+        }
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error("ファイルの読み込みに失敗しました。"));
+                reader.readAsText(file);
+            });
+        }
+
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (e) => reject(new Error("ファイルの読み込みに失敗しました。"));
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
         function toggleSettings(open) {
             const drawer = document.getElementById('settings-drawer');
             if (open) {
@@ -1067,6 +1176,7 @@
                 document.getElementById('setting-api-key').value = apiKey;
                 document.getElementById('setting-history-limit').value = historyLimit;
                 document.getElementById('setting-system-prompt').value = systemPrompt;
+                document.getElementById('setting-context-doc').value = contextDoc;
                 renderHistoryUI();
                 drawer.classList.add('open');
             } else {
@@ -1375,8 +1485,13 @@
             updateStatus("THINKING", "thinking");
             
             // Build text context for the prompt, merging the system prompt directly into the user instructions
+            let contextPrompt = "";
+            if (contextDoc && contextDoc.trim()) {
+                contextPrompt = `\n\n【前提資料・アジェンダ】\n${contextDoc.trim()}\n------------------------------`;
+            }
+
             const systemRule = `【システム指示】
-${systemPrompt}
+${systemPrompt}${contextPrompt}
 
 ------------------------------
 【これまでの会話ログ】`;
