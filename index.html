@@ -149,11 +149,17 @@
             color: var(--text-dim);
             font-weight: 500;
             max-width: 85%;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
-            white-space: nowrap;
+            white-space: normal;
+            min-height: 36px;
             opacity: 0.85;
             transition: color 0.2s;
+            line-height: 1.4;
+            text-align: center;
         }
 
         #live-transcript.active {
@@ -425,36 +431,123 @@
             font-style: italic;
         }
 
-        .ai-history-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 8px 6px;
-            cursor: pointer;
-            transition: background 0.2s;
+        /* Main Screen Suggestion History Container */
+        .main-history-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 16px;
+            margin: 0 24px 10px;
+            padding: 10px 14px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 80px; /* Default height to show ~1.5 suggestions */
+            overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 15;
         }
 
-        .ai-history-item:hover, .ai-history-item:active {
+        .main-history-container.focused {
+            max-height: 220px; /* Expanded height to scroll all suggestions */
+            background: rgba(12, 12, 12, 0.95);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+
+        .main-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            padding-bottom: 2px;
+        }
+
+        .main-history-container.focused .main-history-header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 6px;
+        }
+
+        .main-history-indicator {
+            font-size: 9.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.4);
+            transition: color 0.2s;
+        }
+
+        .main-history-container.focused .main-history-indicator {
+            color: #30d158;
+        }
+
+        .main-history-clear-btn {
+            display: none; /* Hidden by default when collapsed */
+            color: #ff453a;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 2px 6px;
+            background: rgba(255, 59, 48, 0.15);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 59, 48, 0.2);
+            transition: background 0.2s;
+        }
+
+        .main-history-clear-btn:active {
+            background: rgba(255, 59, 48, 0.3);
+        }
+
+        .main-history-container.focused .main-history-clear-btn {
+            display: inline-block; /* Show clear button only when focused */
+        }
+
+        .main-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden; /* Hide scroll in collapsed state */
+            flex: 1;
+        }
+
+        .main-history-container.focused .main-history-list {
+            overflow-y: auto; /* Show scroll in focused state */
+        }
+
+        /* Styling for items in main history */
+        .main-history-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 6px 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            transition: background 0.2s;
+            border-radius: 4px;
+        }
+
+        .main-history-item:hover, .main-history-item:active {
             background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
         }
 
-        .ai-history-item:last-child {
+        .main-history-item:last-child {
             border-bottom: none;
         }
 
-        .ai-history-meta {
+        .main-history-meta {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-size: 9.5px;
             font-weight: 600;
         }
 
-        .ai-history-text {
-            font-size: 13px;
-            color: #ffffff;
-            line-height: 1.4;
+        .main-history-text {
+            font-size: 11.5px;
+            color: #dddddd;
+            line-height: 1.35;
             white-space: pre-wrap;
             word-break: break-all;
             text-align: left;
@@ -667,6 +760,20 @@
         </div>
     </div>
 
+    <!-- Main Screen Suggestion History (Constantly visible, clickable to expand/scroll) -->
+    <div id="main-ai-history" class="main-history-container" onclick="handleHistoryContainerClick(event)">
+        <div class="main-history-header">
+            <span class="main-history-title">提案履歴</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="main-history-clear" class="main-history-clear-btn" onclick="clearAiHistory(event)">クリア</span>
+                <span id="main-history-indicator" class="main-history-indicator">タップでフォーカス</span>
+            </div>
+        </div>
+        <div id="main-history-list" class="main-history-list">
+            <div class="history-empty">提案履歴はありません。</div>
+        </div>
+    </div>
+
     <!-- Live low-contrast speech preview & debug display -->
     <div class="live-preview-container">
         <div id="live-transcript">マイク：待機中</div>
@@ -806,15 +913,6 @@
 その点を確認する。</textarea>
         </div>
 
-        <div class="form-group">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
-                提案履歴（タップで再表示）
-                <button class="btn-small" onclick="clearAiHistory()" style="background:rgba(255,59,48,0.1); color:#ff453a; border-color:rgba(255,59,48,0.2);">クリア</button>
-            </label>
-            <div id="ai-history-preview" class="history-list" style="max-height: 180px;">
-                <div class="history-empty">提案履歴はありません。</div>
-            </div>
-        </div>
 
         <div class="form-group">
             <label style="display:flex; justify-content:space-between; align-items:center;">
@@ -1340,7 +1438,7 @@
         }
 
         function renderAiHistoryUI() {
-            const container = document.getElementById('ai-history-preview');
+            const container = document.getElementById('main-history-list');
             if (!container) return;
             if (aiSuggestionsHistory.length === 0) {
                 container.innerHTML = '<div class="history-empty">提案履歴はありません。</div>';
@@ -1357,12 +1455,12 @@
                 }
                 
                 return `
-                    <div class="ai-history-item" onclick="restoreAiSuggestion(${index})">
-                        <div class="ai-history-meta">
+                    <div class="main-history-item" data-index="${index}">
+                        <div class="main-history-meta">
                             <span style="color: rgba(255, 255, 255, 0.6);">${escapeHtml(item.persona)}</span>
                             <span style="${tagColorStyle} font-weight: 800;">[${escapeHtml(item.tag)}] ${escapeHtml(item.time)}</span>
                         </div>
-                        <div class="ai-history-text">${escapeHtml(item.text)}</div>
+                        <div class="main-history-text">${escapeHtml(item.text)}</div>
                     </div>
                 `;
             }).join('');
@@ -1372,20 +1470,65 @@
             if (index < 0 || index >= aiSuggestionsHistory.length) return;
             const item = aiSuggestionsHistory[index];
             
-            // Close settings drawer so user can see it on main screen
-            toggleSettings(false);
-            
             // Update text with scale and transitions
             updateTextWithScale(item.text, item.tag);
+            
+            // Unfocus history container
+            const container = document.getElementById('main-ai-history');
+            if (container) {
+                container.classList.remove('focused');
+                const indicator = document.getElementById('main-history-indicator');
+                if (indicator) indicator.textContent = "タップでフォーカス";
+            }
         }
 
-        function clearAiHistory() {
+        function clearAiHistory(e) {
+            if (e) e.stopPropagation();
             if (confirm("提案履歴を消去しますか？")) {
                 aiSuggestionsHistory = [];
                 safeStorage.removeItem('ai_prompter_ai_history');
                 renderAiHistoryUI();
+                
+                const container = document.getElementById('main-ai-history');
+                if (container) {
+                    container.classList.remove('focused');
+                    const indicator = document.getElementById('main-history-indicator');
+                    if (indicator) indicator.textContent = "タップでフォーカス";
+                }
             }
         }
+
+        function handleHistoryContainerClick(e) {
+            e.stopPropagation();
+            const container = document.getElementById('main-ai-history');
+            if (!container) return;
+            
+            if (!container.classList.contains('focused')) {
+                container.classList.add('focused');
+                const indicator = document.getElementById('main-history-indicator');
+                if (indicator) indicator.textContent = "全履歴スクロール表示中";
+                return;
+            }
+            
+            // If focused, handle suggestion item click
+            const itemEl = e.target.closest('.main-history-item');
+            if (itemEl) {
+                const index = parseInt(itemEl.getAttribute('data-index'));
+                restoreAiSuggestion(index);
+            }
+        }
+
+        // Global click listener to collapse history panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const container = document.getElementById('main-ai-history');
+            if (container && container.classList.contains('focused')) {
+                if (!container.contains(e.target)) {
+                    container.classList.remove('focused');
+                    const indicator = document.getElementById('main-history-indicator');
+                    if (indicator) indicator.textContent = "タップでフォーカス";
+                }
+            }
+        });
 
         function escapeHtml(string) {
             return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
