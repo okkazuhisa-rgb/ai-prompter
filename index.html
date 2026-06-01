@@ -441,7 +441,7 @@
             margin: 0 24px 10px;
             padding: 10px 14px;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 80px; /* Default height to show ~1.5 suggestions */
+            max-height: 110px; /* Expanded default height to show ~2 suggestions */
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -451,7 +451,7 @@
         }
 
         .main-history-container.focused {
-            max-height: 220px; /* Expanded height to scroll all suggestions */
+            max-height: 280px; /* Expanded focused height to scroll more suggestions */
             background: rgba(12, 12, 12, 0.95);
             border-color: rgba(255, 255, 255, 0.2);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
@@ -472,17 +472,6 @@
         .main-history-container.focused .main-history-header {
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             padding-bottom: 6px;
-        }
-
-        .main-history-indicator {
-            font-size: 9.5px;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.4);
-            transition: color 0.2s;
-        }
-
-        .main-history-container.focused .main-history-indicator {
-            color: #30d158;
         }
 
         .main-history-clear-btn {
@@ -661,26 +650,7 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
-        /* TTS Icon Toggle styles */
-        .btn-icon-tts {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            color: var(--text-dim);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s, transform 0.2s;
-        }
-        .btn-icon-tts:hover, .btn-icon-tts:active {
-            color: var(--text-main);
-            transform: scale(1.1);
-        }
-        .btn-icon-tts.active {
-            color: #30d158;
-            text-shadow: 0 0 10px rgba(48, 209, 88, 0.4);
-        }
+
         
         /* Layout fixes for alignment */
         .prompter-container {
@@ -766,7 +736,6 @@
             <span class="main-history-title">提案履歴</span>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="main-history-clear" class="main-history-clear-btn" onclick="clearAiHistory(event)">クリア</span>
-                <span id="main-history-indicator" class="main-history-indicator">タップでフォーカス</span>
             </div>
         </div>
         <div id="main-history-list" class="main-history-list">
@@ -800,18 +769,6 @@
             </svg>
         </button>
 
-        <button id="btn-tts" class="btn-icon-tts" onclick="toggleTts()" title="音声読み上げ">
-            <svg id="icon-tts-off" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                <line x1="22" y1="9" x2="16" y2="15"/>
-                <line x1="16" y1="9" x2="22" y2="15"/>
-            </svg>
-            <svg id="icon-tts-on" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-            </svg>
-        </button>
 
         <button class="btn-icon-settings" onclick="toggleSettings(true)">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1007,7 +964,6 @@
 
         // Advanced Config & States
         let activePersona = "debate";
-        let isTtsEnabled = false;
         let contextDoc = ""; // 会議前提資料のテキスト
 
         const PERSONA_CONFIGS = {
@@ -1142,7 +1098,6 @@
             }
             activePersona = savedPersona;
             
-            isTtsEnabled = safeStorage.getItem('ai_prompter_tts_enabled') === 'true';
             systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || (PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].prompt : "");
             contextDoc = safeStorage.getItem('ai_prompter_context_doc') || "";
             
@@ -1187,23 +1142,6 @@
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
             const activeTab = document.getElementById(`tab-${activePersona}`);
             if (activeTab) activeTab.classList.add('active');
-
-            // Sync TTS button state
-            const ttsBtn = document.getElementById('btn-tts');
-            const ttsOff = document.getElementById('icon-tts-off');
-            const ttsOn = document.getElementById('icon-tts-on');
-            if (ttsBtn) {
-                if (isTtsEnabled) {
-                    ttsBtn.classList.add('active');
-                    if (ttsOff) ttsOff.style.display = 'none';
-                    if (ttsOn) ttsOn.style.display = 'block';
-                } else {
-                    ttsBtn.classList.remove('active');
-                    if (ttsOff) ttsOff.style.display = 'block';
-                    if (ttsOn) ttsOn.style.display = 'none';
-                }
-            }
-
             updateFontStyles();
             renderHistoryUI();
             renderAiHistoryUI();
@@ -1477,8 +1415,6 @@
             const container = document.getElementById('main-ai-history');
             if (container) {
                 container.classList.remove('focused');
-                const indicator = document.getElementById('main-history-indicator');
-                if (indicator) indicator.textContent = "タップでフォーカス";
             }
         }
 
@@ -1492,8 +1428,6 @@
                 const container = document.getElementById('main-ai-history');
                 if (container) {
                     container.classList.remove('focused');
-                    const indicator = document.getElementById('main-history-indicator');
-                    if (indicator) indicator.textContent = "タップでフォーカス";
                 }
             }
         }
@@ -1505,8 +1439,6 @@
             
             if (!container.classList.contains('focused')) {
                 container.classList.add('focused');
-                const indicator = document.getElementById('main-history-indicator');
-                if (indicator) indicator.textContent = "全履歴スクロール表示中";
                 return;
             }
             
@@ -1524,8 +1456,6 @@
             if (container && container.classList.contains('focused')) {
                 if (!container.contains(e.target)) {
                     container.classList.remove('focused');
-                    const indicator = document.getElementById('main-history-indicator');
-                    if (indicator) indicator.textContent = "タップでフォーカス";
                 }
             }
         });
@@ -2053,11 +1983,6 @@ ${systemPrompt}${contextPrompt}
                 
                 // テキストの反映とアニメーション復帰 (fade-in + slide-up)
                 textEl.textContent = content;
-                
-                // 画面読み上げを実行
-                if (isTtsEnabled) {
-                    speakText(content);
-                }
             }, 200); // transitioning のCSSトランジション時間に合わせる
         }
 
@@ -2146,59 +2071,7 @@ ${systemPrompt}${contextPrompt}
             console.log(`Persona switched to: ${persona}`);
         }
 
-        // --- Text-to-Speech (TTS) Engine ---
-        function toggleTts() {
-            isTtsEnabled = !isTtsEnabled;
-            safeStorage.setItem('ai_prompter_tts_enabled', isTtsEnabled);
-            
-            const btn = document.getElementById('btn-tts');
-            const iconOff = document.getElementById('icon-tts-off');
-            const iconOn = document.getElementById('icon-tts-on');
-            
-            if (isTtsEnabled) {
-                if (btn) btn.classList.add('active');
-                if (iconOff) iconOff.style.display = 'none';
-                if (iconOn) iconOn.style.display = 'block';
-                speakText("読み上げを有効にしました");
-            } else {
-                if (btn) btn.classList.remove('active');
-                if (iconOff) iconOff.style.display = 'block';
-                if (iconOn) iconOn.style.display = 'none';
-                if ('speechSynthesis' in window && window.speechSynthesis) {
-                    window.speechSynthesis.cancel(); // 読み上げ中なら停止
-                }
-            }
-        }
 
-        function speakText(text) {
-            try {
-                if (!isTtsEnabled || !('speechSynthesis' in window) || !window.speechSynthesis) return;
-                
-                window.speechSynthesis.cancel(); // 進行中の発話をキャンセル
-                
-                let cleanText = text.trim();
-                if (!cleanText) return;
-                
-                const utterance = new SpeechSynthesisUtterance(cleanText);
-                utterance.lang = 'ja-JP';
-                
-                // 最適な日本語の音声を使用
-                const voices = window.speechSynthesis.getVoices();
-                if (voices && voices.find) {
-                    const jaVoice = voices.find(voice => voice.lang === 'ja-JP' || voice.lang.startsWith('ja'));
-                    if (jaVoice) {
-                        utterance.voice = jaVoice;
-                    }
-                }
-                
-                utterance.rate = 1.15; // テンポよく読み上げるため少し早め
-                utterance.pitch = 1.0;
-                
-                window.speechSynthesis.speak(utterance);
-            } catch (err) {
-                console.error("SpeechSynthesis error:", err);
-            }
-        }
 
         // --- UI State Management Helpers ---
         function updateUIState() {
