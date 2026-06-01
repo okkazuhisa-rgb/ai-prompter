@@ -650,6 +650,67 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
 
+        /* Agenda Progress Bar Styles */
+        .agenda-progress-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            margin: 0 auto 12px;
+            max-width: 95%;
+            width: fit-content;
+            font-size: 10px;
+            color: #333333;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .agenda-step {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            font-weight: 500;
+            color: #444444; /* Default dim grey */
+        }
+
+        .agenda-dot {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        .agenda-text {
+            font-size: 10px;
+            letter-spacing: -0.01em;
+        }
+
+        .agenda-connector {
+            color: #1a1a1a;
+            font-size: 9px;
+            letter-spacing: -1.5px;
+            padding: 0 2px;
+            user-select: none;
+        }
+
+        /* Active Glow highlights synchronized with edge glows */
+        .agenda-step.active-white {
+            color: var(--color-white) !important;
+            font-weight: 800;
+            text-shadow: 0 0 10px var(--glow-white);
+        }
+
+        .agenda-step.active-yellow {
+            color: var(--color-yellow) !important;
+            font-weight: 800;
+            text-shadow: 0 0 12px var(--glow-yellow);
+        }
+
+        .agenda-step.active-red {
+            color: var(--color-red) !important;
+            font-weight: 800;
+            text-shadow: 0 0 12px var(--glow-red);
+        }
+
 
         
         /* Layout fixes for alignment */
@@ -720,6 +781,9 @@
         <div id="tab-brainstorm" class="persona-tab" onclick="switchPersona('brainstorm')">アイデア発想</div>
         <div id="tab-facilitate" class="persona-tab" onclick="switchPersona('facilitate')">進行・要約</div>
     </div>
+
+    <!-- Agenda Progress Line (Dynamic dots and low-contrast labels) -->
+    <div id="agenda-progress-bar" class="agenda-progress-container"></div>
 
     <!-- Prompter area -->
     <div class="prompter-container" onclick="handlePrompterTap()">
@@ -803,6 +867,11 @@
                 <option value="gemini-2-flash">Gemini 2 Flash</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-agenda-presets">アジェンダ・プリセット（カンマ区切り）</label>
+            <input type="text" id="setting-agenda-presets" placeholder="前提, 課題, 施策, 実現性, まとめ" value="前提, 課題, 施策, 実現性, まとめ">
         </div>
 
         <div class="form-group">
@@ -965,6 +1034,8 @@
         // Advanced Config & States
         let activePersona = "debate";
         let contextDoc = ""; // 会議前提資料のテキスト
+        let agendaPresets = "前提, 課題, 施策, 実現性, まとめ";
+        let currentPhase = 1;
 
         const PERSONA_CONFIGS = {
             debate: {
@@ -1091,6 +1162,7 @@
             historyLimit = parseInt(safeStorage.getItem('ai_prompter_history_limit')) || 10;
             modelName = safeStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
             silenceDuration = parseFloat(safeStorage.getItem('ai_prompter_silence_duration')) || 2.0;
+            agendaPresets = safeStorage.getItem('ai_prompter_agenda_presets') || "前提, 課題, 施策, 実現性, まとめ";
             
             let savedPersona = safeStorage.getItem('ai_prompter_active_persona');
             if (!savedPersona || !PERSONA_CONFIGS[savedPersona]) {
@@ -1132,6 +1204,7 @@
             // Sync with elements
             document.getElementById('setting-api-key').value = apiKey;
             document.getElementById('setting-model-name').value = modelName;
+            document.getElementById('setting-agenda-presets').value = agendaPresets;
             document.getElementById('setting-history-limit').value = historyLimit;
             document.getElementById('setting-system-prompt').value = systemPrompt;
             document.getElementById('setting-context-doc').value = contextDoc;
@@ -1145,6 +1218,7 @@
             updateFontStyles();
             renderHistoryUI();
             renderAiHistoryUI();
+            renderAgendaProgressUI(currentPhase);
         }
 
         function saveSettings() {
@@ -1153,8 +1227,8 @@
             const inputLimit = parseInt(document.getElementById('setting-history-limit').value);
             const inputPrompt = document.getElementById('setting-system-prompt').value.trim();
             const inputSilence = parseFloat(document.getElementById('setting-silence-duration').value);
-
             const inputContextDoc = document.getElementById('setting-context-doc').value.trim();
+            const inputAgendaPresets = document.getElementById('setting-agenda-presets').value.trim();
 
             apiKey = inputKey;
             modelName = inputModelName;
@@ -1162,16 +1236,19 @@
             systemPrompt = inputPrompt;
             silenceDuration = inputSilence;
             contextDoc = inputContextDoc;
+            agendaPresets = inputAgendaPresets || "前提, 課題, 施策, 実現性, まとめ";
 
             safeStorage.setItem('ai_prompter_api_key', apiKey);
             safeStorage.setItem('ai_prompter_model_name', modelName);
             safeStorage.setItem('ai_prompter_history_limit', historyLimit);
             safeStorage.setItem('ai_prompter_silence_duration', silenceDuration);
             safeStorage.setItem('ai_prompter_context_doc', contextDoc);
+            safeStorage.setItem('ai_prompter_agenda_presets', agendaPresets);
             
             // Save prompt for the active persona specifically
             safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
             
+            renderAgendaProgressUI(currentPhase);
             checkApiKeyStatus();
             toggleSettings(false);
             
@@ -1189,6 +1266,7 @@
                 safeStorage.removeItem('ai_prompter_history');
                 safeStorage.removeItem('ai_prompter_context_doc');
                 safeStorage.removeItem('ai_prompter_ai_history');
+                safeStorage.removeItem('ai_prompter_agenda_presets');
                 location.reload();
             }
         }
@@ -1404,12 +1482,85 @@
             }).join('');
         }
 
+        function renderAgendaProgressUI(phase) {
+            const container = document.getElementById('agenda-progress-bar');
+            if (!container) return;
+            
+            let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (steps.length === 0) {
+                steps = ["前提", "課題", "施策", "実現性", "まとめ"];
+            }
+            
+            const targetPhase = Math.max(1, Math.min(phase, steps.length));
+            currentPhase = targetPhase;
+            
+            let html = "";
+            for (let i = 0; i < steps.length; i++) {
+                const stepNum = i + 1;
+                const isCurrent = (stepNum === targetPhase);
+                const dotChar = isCurrent ? "●" : "◯";
+                
+                html += `<div class="agenda-step" id="agenda-step-${stepNum}">`;
+                html += `<span class="agenda-dot">${dotChar}</span>`;
+                html += `<span class="agenda-text">${steps[i]}</span>`;
+                html += `</div>`;
+                
+                if (i < steps.length - 1) {
+                    html += `<div class="agenda-connector">──</div>`;
+                }
+            }
+            
+            container.innerHTML = html;
+            
+            let activeTag = "WHITE";
+            const prompterTextEl = document.getElementById('prompter-text');
+            if (prompterTextEl) {
+                if (prompterTextEl.classList.contains('style-yellow')) activeTag = "YELLOW";
+                else if (prompterTextEl.classList.contains('style-red')) activeTag = "RED";
+            }
+            updateAgendaGlow(currentPhase, activeTag);
+        }
+
+        function updateAgendaGlow(phase, tag) {
+            const steps = document.querySelectorAll('.agenda-step');
+            steps.forEach(step => {
+                step.classList.remove('active-white', 'active-yellow', 'active-red');
+                const dot = step.querySelector('.agenda-dot');
+                if (dot) {
+                    dot.textContent = "◯";
+                }
+            });
+            
+            const activeStep = document.getElementById(`agenda-step-${phase}`);
+            if (activeStep) {
+                const colorTag = (tag || "WHITE").toUpperCase();
+                let activeClass = 'active-white';
+                if (colorTag === 'YELLOW') {
+                    activeClass = 'active-yellow';
+                } else if (colorTag === 'RED') {
+                    activeClass = 'active-red';
+                }
+                activeStep.classList.add(activeClass);
+                
+                const dot = activeStep.querySelector('.agenda-dot');
+                if (dot) {
+                    dot.textContent = "●";
+                }
+            }
+        }
+
         function restoreAiSuggestion(index) {
             if (index < 0 || index >= aiSuggestionsHistory.length) return;
             const item = aiSuggestionsHistory[index];
             
             // Update text with scale and transitions
             updateTextWithScale(item.text, item.tag);
+            
+            // Restore phase if it exists
+            if (item.phase !== undefined && item.phase !== null) {
+                currentPhase = item.phase;
+                updateAgendaGlow(currentPhase, item.tag);
+            }
             
             // Unfocus history container
             const container = document.getElementById('main-ai-history');
@@ -1424,6 +1575,10 @@
                 aiSuggestionsHistory = [];
                 safeStorage.removeItem('ai_prompter_ai_history');
                 renderAiHistoryUI();
+                
+                // Reset phase
+                currentPhase = 1;
+                renderAgendaProgressUI(currentPhase);
                 
                 const container = document.getElementById('main-ai-history');
                 if (container) {
@@ -1725,8 +1880,16 @@
                 contextPrompt = `\n\n【前提資料・アジェンダ】\n${contextDoc.trim()}\n------------------------------`;
             }
 
+            let dynamicAgendaRule = "";
+            if (agendaPresets && agendaPresets.trim()) {
+                dynamicAgendaRule = `\n\n【アジェンダ進行指示】
+現在の会話内容から、全体のアジェンダ [${agendaPresets.trim()}] のうち、現在どのフェーズに位置しているかを裏で判定してください。
+そして、出力する提言テキストの【末尾】に、必ず \`[PHASE:インデックス番号]\`（例: 1から始まるアジェンダ項目の番号。1番目の項目の場合は \`[PHASE:1]\`）というタグのみを付与して返却してください。
+（例：発言提案のテキスト [PHASE:2]）`;
+            }
+
             const systemRule = `【システム指示】
-${systemPrompt}${contextPrompt}
+${systemPrompt}${contextPrompt}${dynamicAgendaRule}
 
 ------------------------------
 【これまでの会話ログ】`;
@@ -1873,6 +2036,18 @@ ${systemPrompt}${contextPrompt}
             const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
             
+            // Extract and strip [PHASE:x] tag at the very beginning
+            const phaseMatch = content.match(/\[PHASE:\s*(\d+)\s*\]/i);
+            if (phaseMatch) {
+                const parsedPhase = parseInt(phaseMatch[1]);
+                const steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                const stepsCount = steps.length > 0 ? steps.length : 5;
+                currentPhase = Math.max(1, Math.min(parsedPhase, stepsCount));
+                
+                // Strip the tag from content
+                content = content.replace(/\[PHASE:\s*\d+\s*\]/gi, '').trim();
+            }
+
             // 1. マークダウンのコードブロック囲み (```json や ```markdown 等) を除去
             content = content.replace(/^```[a-zA-Z]*\n/, '');
             content = content.replace(/\n```$/, '');
@@ -1926,7 +2101,8 @@ ${systemPrompt}${contextPrompt}
                 persona: personaName,
                 tag: matchedTag,
                 text: content,
-                time: timestamp
+                time: timestamp,
+                phase: currentPhase // Save current phase!
             });
             if (aiSuggestionsHistory.length > 20) {
                 aiSuggestionsHistory.pop();
@@ -1936,6 +2112,7 @@ ${systemPrompt}${contextPrompt}
 
             // 5. アニメーション・スケール・TTS適用の表示ロジックへ
             updateTextWithScale(content, matchedTag);
+            updateAgendaGlow(currentPhase, matchedTag);
         }
 
         // --- Dynamic scaling, Transitions, Edge Glow, and Speech Output ---
