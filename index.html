@@ -1237,6 +1237,17 @@
             document.addEventListener('visibilitychange', handleVisibilityChange);
         });
 
+        // --- Helper to get system prompt with auto-migration of old hardcoded character limits ---
+        function getSystemPromptForPersona(persona) {
+            let loadedPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`);
+            if (loadedPrompt) {
+                // 自動移行ロジック：古いハードコードされた文字数制限表記を、動的参照に変更する
+                loadedPrompt = loadedPrompt.replace(/全体で150[〜~]200文字程度/g, "指定された出力文字数制限に従い");
+                return loadedPrompt;
+            }
+            return (PERSONA_CONFIGS[persona] ? PERSONA_CONFIGS[persona].prompt : "");
+        }
+
         // --- Settings Management (localStorage via safeStorage) ---
         function loadSettings() {
             apiKey = safeStorage.getItem('ai_prompter_api_key') || "";
@@ -1253,7 +1264,7 @@
             }
             activePersona = savedPersona;
             
-            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || (PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].prompt : "");
+            systemPrompt = getSystemPromptForPersona(activePersona);
             contextDoc = safeStorage.getItem('ai_prompter_context_doc') || "";
             
             const localHist = safeStorage.getItem('ai_prompter_history');
@@ -2351,7 +2362,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             if (activeTab) activeTab.classList.add('active');
             
             // システムプロンプト編集エリアとグローバル変数の同期
-            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`) || PERSONA_CONFIGS[persona].prompt;
+            systemPrompt = getSystemPromptForPersona(persona);
             document.getElementById('setting-system-prompt').value = systemPrompt;
             
             // 一時的にグローエフェクトを点滅させて切り替えを通知
