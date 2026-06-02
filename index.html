@@ -2009,8 +2009,14 @@
             let characterLimitRule = `\n\n【出力文字数制限】
 提案する発言候補テキストは、全体で必ず「${outputLimit}文字以内」とし、適度に改行を入れて読みやすく作成してください。この文字数上限は厳格に遵守してください。`;
 
+            let recentSuggestionsRule = "";
+            if (aiSuggestionsHistory && aiSuggestionsHistory.length > 0) {
+                const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.text}`).join('\n');
+                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】です。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
+            }
+
             const systemRule = `【システム指示】
-${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}
+${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}
 
 ------------------------------
 【これまでの会話ログ】`;
