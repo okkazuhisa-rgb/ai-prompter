@@ -49,6 +49,37 @@
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
+        /* App Brand Header Styles */
+        .app-header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 14px 20px 2px;
+            z-index: 10;
+            box-sizing: border-box;
+        }
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .brand-icon {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            object-fit: cover;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+        }
+        .brand-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #ffffff;
+            opacity: 0.9;
+        }
+
         /* API Key Warning Banner */
         #api-warning {
             background: rgba(255, 59, 48, 0.15);
@@ -95,6 +126,12 @@
             opacity: 0;
             transform: translateY(12px);
         }
+        #prompter-text.initial-placeholder {
+            font-size: calc(var(--font-size-base) * 0.7) !important;
+            font-weight: 500;
+            opacity: 0.65;
+            text-shadow: none !important;
+        }
 
         /* Styling Classes mapped dynamically from tags */
         .style-white {
@@ -136,7 +173,7 @@
         .live-preview-container {
             padding: 12px 20px;
             text-align: center;
-            min-height: 50px;
+            min-height: 100px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -150,16 +187,16 @@
             font-weight: 500;
             max-width: 85%;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 5;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: normal;
-            min-height: 36px;
+            min-height: 90px;
             opacity: 0.85;
             transition: color 0.2s;
             line-height: 1.4;
-            text-align: center;
+            text-align: left;
         }
 
         #live-transcript.active {
@@ -359,6 +396,11 @@
             border-color: rgba(255, 255, 255, 0.3);
         }
 
+        .form-group select option {
+            background-color: #121212;
+            color: #ffffff;
+        }
+
         .api-key-input-container {
             display: flex;
             gap: 8px;
@@ -441,7 +483,7 @@
             margin: 0 24px 10px;
             padding: 10px 14px;
             transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 110px; /* Expanded default height to show ~2 suggestions */
+            max-height: 150px; /* Expanded default height to show suggestions */
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -451,7 +493,7 @@
         }
 
         .main-history-container.focused {
-            max-height: 280px; /* Expanded focused height to scroll more suggestions */
+            max-height: 380px; /* Expanded focused height to scroll suggestions */
             background: rgba(12, 12, 12, 0.95);
             border-color: rgba(255, 255, 255, 0.2);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
@@ -626,7 +668,7 @@
             border-radius: 30px;
             padding: 4px;
             gap: 2px;
-            margin: 18px auto 8px;
+            margin: 8px auto 8px;
             max-width: 90%;
             width: fit-content;
             align-self: center;
@@ -775,11 +817,19 @@
         Gemini APIキーを設定してください（タップして設定）
     </div>
 
+    <!-- App Brand Header -->
+    <div class="app-header">
+        <div class="brand-container">
+            <img src="stealth_brain_icon.png" alt="Icon" class="brand-icon">
+            <span class="brand-title">stealth brain</span>
+        </div>
+    </div>
+
     <!-- AI Persona Selector Tabs -->
     <div class="persona-tabs">
-        <div id="tab-debate" class="persona-tab active" onclick="switchPersona('debate')">戦略参謀</div>
-        <div id="tab-brainstorm" class="persona-tab" onclick="switchPersona('brainstorm')">アイデア発想</div>
-        <div id="tab-facilitate" class="persona-tab" onclick="switchPersona('facilitate')">進行・要約</div>
+        <div id="tab-debate" class="persona-tab active" onclick="switchPersona('debate')">戦略</div>
+        <div id="tab-brainstorm" class="persona-tab" onclick="switchPersona('brainstorm')">アイデア</div>
+        <div id="tab-facilitate" class="persona-tab" onclick="switchPersona('facilitate')">進行</div>
     </div>
 
     <!-- Agenda Progress Line (Dynamic dots and low-contrast labels) -->
@@ -787,23 +837,23 @@
 
     <!-- Prompter area -->
     <div class="prompter-container" onclick="handlePrompterTap()">
-        <div id="prompter-text" class="style-white">
+        <div id="prompter-text" class="style-white initial-placeholder">
             会話を開始すると<br>
             ここに次の発言候補が<br>
-            リアルタイムに表示されます。
+            リアルタイム表示されます
         </div>
     </div>
 
     <!-- Main Screen Suggestion History (Constantly visible, clickable to expand/scroll) -->
     <div id="main-ai-history" class="main-history-container" onclick="handleHistoryContainerClick(event)">
         <div class="main-history-header">
-            <span class="main-history-title">提案履歴</span>
+            <span class="main-history-title">発言候補履歴</span>
             <div style="display: flex; align-items: center; gap: 8px;">
                 <span id="main-history-clear" class="main-history-clear-btn" onclick="clearAiHistory(event)">クリア</span>
             </div>
         </div>
         <div id="main-history-list" class="main-history-list">
-            <div class="history-empty">提案履歴はありません。</div>
+            <div class="history-empty">発言候補履歴はありません。</div>
         </div>
     </div>
 
@@ -883,6 +933,14 @@
         </div>
 
         <div class="form-group">
+            <label>出力文字数制限</label>
+            <div style="display: flex; align-items: center; gap: 12px; padding: 4px 0;">
+                <input type="range" id="setting-output-limit" min="50" max="400" step="10" value="200" style="flex: 1;" oninput="updateOutputLimitDisplay(this.value)">
+                <span id="output-limit-display" style="font-size: 14px; font-weight: 700; min-width: 50px; text-align: right;">200文字</span>
+            </div>
+        </div>
+
+        <div class="form-group">
             <label>プロンプター文字サイズ</label>
             <div class="font-size-controls">
                 <button class="btn-small" onclick="adjustFontSize(-0.5)">縮小 -</button>
@@ -902,7 +960,10 @@
         </div>
 
         <div class="form-group">
-            <label for="setting-context-doc">会議の前提資料・アジェンダ等（任意）</label>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label for="setting-context-doc">会議の前提資料・アジェンダ等（任意）</label>
+                <button type="button" class="btn-small" id="btn-clear-file" onclick="clearFileAttachment(event)" style="font-size: 11px; padding: 2px 8px; height: auto; border: 1px solid rgba(255, 59, 48, 0.4); background: rgba(255, 59, 48, 0.1); color: #ff453a; display: none;">削除</button>
+            </div>
             <div class="file-upload-card" onclick="document.getElementById('setting-file-input').click()">
                 <input type="file" id="setting-file-input" accept=".txt,.md,.csv,.pdf" style="display: none;" onchange="handleFileAttachment(this)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
@@ -914,7 +975,7 @@
 
         <div class="form-group">
             <label for="setting-system-prompt">Gemini システムプロンプト</label>
-            <textarea id="setting-system-prompt" rows="5" style="resize: vertical;">あなたはユーザーの思考と発言を強化する超優秀な「戦略参謀（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【最大3行・各行20文字以内】で作成してください。
+            <textarea id="setting-system-prompt" rows="5" style="resize: vertical;">あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【ルール】
 1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
@@ -1030,6 +1091,7 @@
         let historyLimit = 10;
         let modelName = "gemini-2.5-flash";
         let silenceDuration = 2.0; // 秒（デフォルト2.0秒）
+        let outputLimit = 200; // 出力文字数制限（デフォルト200文字）
 
         // Advanced Config & States
         let activePersona = "debate";
@@ -1039,8 +1101,8 @@
 
         const PERSONA_CONFIGS = {
             debate: {
-                name: "戦略参謀",
-                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略参謀（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+                name: "戦略",
+                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【ルール】
 1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
@@ -1054,8 +1116,8 @@
                 tag: "WHITE"
             },
             brainstorm: {
-                name: "アイデア発想",
-                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期せぬアナロジー」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+                name: "アイデア",
+                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期セぬアナロジー」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【ルール】
 1. 当たり前の意見やオウム返しは【絶対に禁止】です。
@@ -1069,8 +1131,8 @@
                 tag: "WHITE"
             },
             facilitate: {
-                name: "進行・要約",
-                prompt: `あなたは会議を円滑に進め、全員の知恵を引き出す超優秀な「ファシリテーター（対話促進役）」です。会話ログを分析し、対立を和らげて合意形成に向かわせるための「論点の整理、対立点の昇華（アウフヘーベン）、議論を前に進めるための良い問いかけ」を【全体で150〜200文字程度、適度に改行を入れて読みやすく】作成してください。
+                name: "進行",
+                prompt: `あなたは会議を円滑に進め、全員の知恵を引き出す超優秀な「ファシリテーター（対話促進役）」です。会話ログを分析し、対立を和らげて合意形成に向かわせるための「論点の整理、対立点の昇華（アウフヘーベン）、議論を前に進めるための良い問いかけ」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【ルール】
 1. 単に話を聞き流すだけや、「どうぞ」といった単調なオウム返しは【絶対に禁止】です。
@@ -1163,6 +1225,7 @@
             modelName = safeStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash";
             silenceDuration = parseFloat(safeStorage.getItem('ai_prompter_silence_duration')) || 2.0;
             agendaPresets = safeStorage.getItem('ai_prompter_agenda_presets') || "前提, 課題, 施策, 実現性, まとめ";
+            outputLimit = parseInt(safeStorage.getItem('ai_prompter_output_limit')) || 200;
             
             let savedPersona = safeStorage.getItem('ai_prompter_active_persona');
             if (!savedPersona || !PERSONA_CONFIGS[savedPersona]) {
@@ -1210,6 +1273,13 @@
             document.getElementById('setting-context-doc').value = contextDoc;
             document.getElementById('setting-silence-duration').value = silenceDuration;
             document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
+            document.getElementById('setting-output-limit').value = outputLimit;
+            document.getElementById('output-limit-display').textContent = outputLimit + "文字";
+            
+            const btnClearFile = document.getElementById('btn-clear-file');
+            if (btnClearFile) {
+                btnClearFile.style.display = contextDoc ? "block" : "none";
+            }
             
             // Sync persona tabs
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
@@ -1229,6 +1299,7 @@
             const inputSilence = parseFloat(document.getElementById('setting-silence-duration').value);
             const inputContextDoc = document.getElementById('setting-context-doc').value.trim();
             const inputAgendaPresets = document.getElementById('setting-agenda-presets').value.trim();
+            const inputOutputLimit = parseInt(document.getElementById('setting-output-limit').value);
 
             apiKey = inputKey;
             modelName = inputModelName;
@@ -1237,6 +1308,7 @@
             silenceDuration = inputSilence;
             contextDoc = inputContextDoc;
             agendaPresets = inputAgendaPresets || "前提, 課題, 施策, 実現性, まとめ";
+            outputLimit = inputOutputLimit;
 
             safeStorage.setItem('ai_prompter_api_key', apiKey);
             safeStorage.setItem('ai_prompter_model_name', modelName);
@@ -1244,6 +1316,12 @@
             safeStorage.setItem('ai_prompter_silence_duration', silenceDuration);
             safeStorage.setItem('ai_prompter_context_doc', contextDoc);
             safeStorage.setItem('ai_prompter_agenda_presets', agendaPresets);
+            safeStorage.setItem('ai_prompter_output_limit', outputLimit);
+            
+            const btnClearFile = document.getElementById('btn-clear-file');
+            if (btnClearFile) {
+                btnClearFile.style.display = contextDoc ? "block" : "none";
+            }
             
             // Save prompt for the active persona specifically
             safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
@@ -1267,6 +1345,7 @@
                 safeStorage.removeItem('ai_prompter_context_doc');
                 safeStorage.removeItem('ai_prompter_ai_history');
                 safeStorage.removeItem('ai_prompter_agenda_presets');
+                safeStorage.removeItem('ai_prompter_output_limit');
                 location.reload();
             }
         }
@@ -1286,6 +1365,22 @@
 
         function updateSilenceDurationDisplay(val) {
             document.getElementById('silence-duration-display').textContent = parseFloat(val).toFixed(1) + "秒";
+        }
+
+        function updateOutputLimitDisplay(val) {
+            document.getElementById('output-limit-display').textContent = val + "文字";
+        }
+
+        function clearFileAttachment(e) {
+            if (e) e.stopPropagation();
+            if (confirm("添付資料を削除しますか？")) {
+                document.getElementById('setting-file-input').value = "";
+                document.getElementById('setting-context-doc').value = "";
+                document.getElementById('file-upload-status').textContent = "タップして資料を選択";
+                const btn = document.getElementById('btn-clear-file');
+                if (btn) btn.style.display = "none";
+                contextDoc = "";
+            }
         }
 
         function checkApiKeyStatus() {
@@ -1367,6 +1462,9 @@
                 } else {
                     throw new Error("サポートされていないファイル形式です。TXT, MD, CSV, PDFファイルを添付してください。");
                 }
+                
+                const btn = document.getElementById('btn-clear-file');
+                if (btn) btn.style.display = "block";
             } catch (err) {
                 console.error("File loading error:", err);
                 if (statusEl) {
@@ -1457,7 +1555,7 @@
             const container = document.getElementById('main-history-list');
             if (!container) return;
             if (aiSuggestionsHistory.length === 0) {
-                container.innerHTML = '<div class="history-empty">提案履歴はありません。</div>';
+                container.innerHTML = '<div class="history-empty">発言候補履歴はありません。</div>';
                 return;
             }
             container.innerHTML = aiSuggestionsHistory.map((item, index) => {
@@ -1571,7 +1669,7 @@
 
         function clearAiHistory(e) {
             if (e) e.stopPropagation();
-            if (confirm("提案履歴を消去しますか？")) {
+            if (confirm("発言候補履歴を消去しますか？")) {
                 aiSuggestionsHistory = [];
                 safeStorage.removeItem('ai_prompter_ai_history');
                 renderAiHistoryUI();
@@ -1888,8 +1986,11 @@
 （例：発言提案のテキスト [PHASE:2]）`;
             }
 
+            let characterLimitRule = `\n\n【出力文字数制限】
+提案する発言候補テキストは、全体で必ず「${outputLimit}文字以内」とし、適度に改行を入れて読みやすく作成してください。この文字数上限は厳格に遵守してください。`;
+
             const systemRule = `【システム指示】
-${systemPrompt}${contextPrompt}${dynamicAgendaRule}
+${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}
 
 ------------------------------
 【これまでの会話ログ】`;
@@ -2094,7 +2195,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}
                 content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
             }
 
-            // 4. 提案履歴へ追加して保存
+            // 4. 発言候補履歴へ追加して保存
             const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const personaName = PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].name : activePersona;
             aiSuggestionsHistory.unshift({
