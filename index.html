@@ -1782,10 +1782,7 @@
             currentInterimText = "";
             lastSpeechTime = Date.now();
 
-            // Fire Gemini suggestion request
-            await sendToGemini();
-
-            // Reset completed, start recognition again safely
+            // Reset completed, start recognition again safely (WITHOUT waiting for Gemini)
             isResettingSession = false;
             if (isListening && recognition) {
                 try {
@@ -1794,6 +1791,9 @@
                     console.error("Error restarting recognition after commit:", e);
                 }
             }
+
+            // Fire Gemini suggestion request asynchronously in background
+            sendToGemini();
         }
 
         // --- Silence Check countdown loop ---
