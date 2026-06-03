@@ -1022,30 +1022,42 @@
             },
             facilitate: {
                 name: "進行",
-                temperature: 0.6,
-                prompt: `あなたは会議を進める人間のファシリテーターを支援する「AI副操縦士（カンペ）」です。
-以下のルールに従って、ファシリテーターが口頭で言うべき推奨セリフ、次のアジェンダ/論点、および議論要約（State）を出力してください。
+                temperature: 0.3,
+                prompt: `あなたは人間のファシリテーターを支援する「カンペ（副操縦士）」です。
+毎ターン、以下の2つのデータのみを入力として受け取り、次の出力を生成します。
 
-【入力情報】
-毎ターン、以下の2つのみを受け取ります。
-1. 前のターンまでの議論要約 (State)
-2. 会話から得られた直近の文字起こし発言（3発言分）
+【入力1：State（前ターンまでの議論の要約）】
+【入力2：直近3発言の生データ（文字起こしノイズを含む）】
 
-【出力フォーマット】
-以下のタグおよび構造のみを出力してください。解説や説明、マークダウンのコードブロック( \`\`\` )などは一切出力しないでください。
+縦長画面（スマホ・PCスナップ）での視認性を最優先するため、以下のタグおよび構造以外（解説やmarkdownのコードブロック \`\`\` など）は一切出力しないでください。
 
 【RECOMMEND】
-（ここに、ファシリテーターが「今すぐ口頭でそのまま発言すべき推奨セリフ」を1つの段落で出力してください。口頭で言って自然でシンプルな日本語とし、100〜150文字程度で、フランクかつ簡潔な問いかけや整理とします。「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」といった中身のないビジネス用語やクリシェは【厳格に禁止】します。具体的で伝わりやすい日本語に噛み砕いてください）
+（ここに「今すぐ人間が口頭で発言すべき推奨セリフ」を1つの塊で出力。100文字〜150文字程度。フックとなる具体的な問いかけで締める。前置きや「〜ですね」等の冗長な応答は不要。口頭で言いやすい自然な言葉遣いにすること）
 
 【NEXT】
-・（次に議論すべきアジェンダの選択肢・論点タグを簡潔な箇条書きで最大3件提示してください。アジェンダ項目と連動させてください）
+（ここに「議論が手詰まりになった際の別の切り口タグ」を3つスペース区切りで出力。例：\`[管理者側の巻き込み] [通知の工夫] [インセンティブ]\`。必ず大括弧で囲み、箇条書きにはしないこと）
 
 【STATE_UPDATE】
-（議論の現在のステータスを3行以内の箇条書きで出力してください。現在の合意事項、対立点、未解決の問い）
-（最後に、全体のアジェンダ項目リストのうち現在位置しているフェーズ番号を [PHASE:インデックス番号] の形式で必ず付与してください。例: [PHASE:2]）
+■ 現在の位置：[現在のフェーズ（前提/課題/施策/実現性/まとめ）および残り時間の目安] [PHASE:番号]
+■ これまでの合意点：
+・（議論の進捗を箇条書きで1〜2点）
+■ 未決の論点・課題：
+・（次に合意すべき、または停滞している論点を箇条書きで1点）
+※重要：アジェンダ連動用として「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5の半角数値）を付記してください（例：■ 現在の位置：[前提] 残り時間の目安：5分 [PHASE:1]）。このタグはUI上で自動的に非表示処理されます。
+
+【アジェンダ進行・終了判定の厳格ルール】
+文字起こし（直近3発言）の最終盤において、以下の「終了シグナル」が1つでも検知された場合は、既存の議論フェーズをすべて破棄し、強制的に【まとめ・終了フェーズ】へ遷移してください。
+・終了シグナル例：「ありがとうございました」「お疲れ様でした」「退出」「以上で発表を終わります」「タイムオーバー」など
+・終了時の挙動：新たな議論の深掘り（問いかけ）は一切【禁止】とし、メンバーの労をねぎらい、セッションをクローズするための挨拶セリフを【RECOMMEND】に出力してください。また、現在の位置を「まとめ（[PHASE:5]）」として出力してください。
+
+【重複防止および表現 of 厳格禁止ルール】
+・重複の絶対禁止：過去3ターン以内の出力履歴と「文字列として20%以上一致する出力」および「意味的に酷似した提案」は厳格に禁止します。常に最新の直近3発言を反映した新規の切り口を生成してください。
+・禁止コーポレート・クリシェ：以下の曖昧なビジネス用語は、思考を停止させるため一文字たりとも使用を禁止します。
+  禁止語：「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」「最大化」「推進」「ベクトルを合わせる」
+  代替策：より具体的で泥臭い、実務レベルでイメージが湧く言葉（例：「みんなが動きたくなる約束事」「通知のタイミング」「方向性を揃える」「一番効果が出るやり方」など）に超訳してください。
 
 【入力テキストの誤認識に対する超訳ルール】
-入力される会話は音声認識による不完全な生データです。誤字脱字、同音異義語の誤変換、言葉の詰まり等は、前後の文脈や前提情報から本来の「真の意図」へサイレントに超訳した上で処理してください。`,
+入力される会話ログは、音声認識による不完全な生データです。誤字脱字、同音異義語の誤変換、言葉の詰まり等は、前後の文脈や前提情報から本来の「真の意図」へサイレントに超訳した上で処理してください。`,
                 tag: "WHITE"
             }
         };
@@ -1896,7 +1908,7 @@
             let recentSuggestionsRule = "";
             if (aiSuggestionsHistory && aiSuggestionsHistory.length > 0) {
                 const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.text}`).join('\n');
-                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】します。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
+                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複の絶対禁止ルール】\n過去3ターン以内の出力（上記【直近の提案履歴】）と「文字列として20%以上一致する出力」および「意味的に酷似した提案」は厳格に禁止します。常に最新の直近3発言を反映した、新規の切り口の発言候補を生成してください。`;
             }
 
             // ビジネス用語クリシェ排除フィルター
@@ -1905,21 +1917,43 @@
 ・禁止語:「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」「最大化」「推進」「ベクトルを合わせる」
 代わりに、より具体的でリアルな実務語彙、または対立軸を突く具体的な指摘を用い、簡潔に提案してください。`;
 
-            // 会議アジェンダ進行フェーズ連動ルール
+            // 会議アジェンダ進行フェーズ連動ルールおよび終了判定
             let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
             if (steps.length === 0) {
                 steps = ["前提", "課題", "施策", "実現性", "まとめ"];
             }
-            let isEarlyPhase = (currentPhase <= 2 || currentPhase <= Math.ceil(steps.length / 2));
+
+            // 終了シグナルの検知（直近3発言）
+            const terminationSignals = ["ありがとうございました", "お疲れ様でした", "お疲れさまでした", "退出", "終わります", "タイムオーバー", "タイムアップ", "おわります"];
+            const recentUtterancesForTerm = conversationHistory.slice(-3);
+            let terminationDetected = false;
+            for (const utterance of recentUtterancesForTerm) {
+                for (const signal of terminationSignals) {
+                    if (utterance.includes(signal)) {
+                        terminationDetected = true;
+                        break;
+                    }
+                }
+                if (terminationDetected) break;
+            }
+
             let agendaPhaseRule = "";
-            if (isEarlyPhase) {
-                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
+            if (activePersona === 'facilitate' && terminationDetected) {
+                const lastPhaseNum = steps.length;
+                agendaPhaseRule = `\n\n【緊急割込指示：終了シグナル検知】
+直近の発言において終了のシグナル（「ありがとうございました」「お疲れ様でした」など）が検知されました。既存の議論フェーズをすべて破棄し、強制的に【まとめ・終了フェーズ】へ遷移してください。
+新たな議論の深掘り（問いかけ）は一切【禁止】とし、メンバーの労をねぎらい、セッションをクローズするための挨拶セリフを【RECOMMEND】に出力してください。また、現在の位置を「まとめ（[PHASE:${lastPhaseNum}]）」として出力してください。`;
+            } else {
+                let isEarlyPhase = (currentPhase <= 2 || currentPhase <= Math.ceil(steps.length / 2));
+                if (isEarlyPhase) {
+                    agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
 現在は会議の前半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '前提・課題'} ]）です。
 アイデア発想や論点整理のために、「そもそも〜という前提や意図は何ですか？」「見落としている根本的な課題は何か」といった、前提や課題の核心に迫る「本質的な問いかけ」や「対立軸の指摘」を優先してください。`;
-            } else {
-                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
+                } else {
+                    agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
 現在は会議の後半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '施策・実現性'} ]）です。
 具体的な実行可能性や合意形成のために、リソース、スケジュール、役割分担などの「実行上のボトルネックを指摘する現実的な論点」や「対立点を統合する折衷案・次のステップの提言」を優先してください。`;
+                }
             }
 
             // Native systemInstruction payload construction
@@ -1935,7 +1969,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                     ? recentUtterances.map((text, idx) => `発言: ${text}`).join('\n')
                     : "（発言はまだありません）";
                 
-                userPromptText = `【入力1：State（前ターンまでの議論の要約）】\n${stateText}\n\n【入力2：直近3発言の生データ（文字起こしノイズを含む）】\n${recentText}\n\n上記に基づき、推奨セリフ、次のアジェンダ/論点、および議論要約を更新して返してください。`;
+                userPromptText = `【入力1：State（前ターンまでの議論の要約）】\n${stateText}\n\n【入力2：直近3発言の生データ（文字起こしノイズを含む）】\n${recentText}`;
             } else {
                 const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
                 userPromptText = `${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
@@ -2249,10 +2283,19 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 textEl.className = ""; // Reset
                 glowEl.className = 'edge-glow glow-white'; // Facilitator glows white
 
-                // Next Tags Badges parse (often begins with '-' or '・')
-                const tagLines = nextTags.split('\n')
-                    .map(line => line.replace(/^[-・\s*]+/, '').trim())
-                    .filter(line => line.length > 0);
+                // Next Tags Badges parse (support bracket tags e.g. [tag1] [tag2])
+                let tagLines = [];
+                const regex = /\[([^\]]+)\]/g;
+                let match;
+                while ((match = regex.exec(nextTags)) !== null) {
+                    tagLines.push(match[1].trim());
+                }
+                if (tagLines.length === 0) {
+                    // fallback to splitting by newlines, commas, bullets
+                    tagLines = nextTags.split(/[\n,、・]+/)
+                        .map(line => line.replace(/^[-・\s*]+/, '').trim())
+                        .filter(line => line.length > 0);
+                }
 
                 let tagsHtml = "";
                 if (tagLines.length > 0) {
