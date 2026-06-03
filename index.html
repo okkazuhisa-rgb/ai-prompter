@@ -1108,6 +1108,7 @@
         const PERSONA_CONFIGS = {
             debate: {
                 name: "戦略",
+                temperature: 0.5,
                 prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【入力テキストの誤認識に対する超訳ルール】
@@ -1128,6 +1129,7 @@
             },
             brainstorm: {
                 name: "アイデア",
+                temperature: 0.9,
                 prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期セぬアナロジー」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【入力テキストの誤認識に対する超訳ルール】
@@ -1148,6 +1150,7 @@
             },
             facilitate: {
                 name: "進行",
+                temperature: 0.6,
                 prompt: `あなたは会議を円滑に進め、全員の知恵を引き出す超優秀な「ファシリテーター（対話促進役）」です。会話ログを分析し、対立を和らげて合意形成に向かわせるための「論点の整理、対立点の昇華（アウフヘーベン）、議論を前に進めるための良い問いかけ」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【入力テキストの誤認識に対する超訳ルール】
@@ -1167,6 +1170,17 @@
                 tag: "WHITE"
             }
         };
+
+        // --- Helper to get system prompt with auto-migration of old hardcoded character limits ---
+        function getSystemPromptForPersona(persona) {
+            let loadedPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`);
+            if (loadedPrompt) {
+                // 自動移行ロジック：古いハードコードされた文字数制限表記を、動的参照に変更する
+                loadedPrompt = loadedPrompt.replace(/全体で150[〜~]200文字程度/g, "指定された出力文字数制限に従い");
+                return loadedPrompt;
+            }
+            return (PERSONA_CONFIGS[persona] ? PERSONA_CONFIGS[persona].prompt : "");
+        }
 
         // --- Helper: Deduplicate Speech recognition results (handles Android Chrome duplication bug) ---
         function mergeSpeechResults(results) {
@@ -2028,7 +2042,10 @@
 
             updateStatus("THINKING", "thinking");
             
-            // Build text context for the prompt, merging the system prompt directly into the user instructions
+            // Get temperature based on selected persona
+            const personaTemp = (PERSONA_CONFIGS[activePersona] && PERSONA_CONFIGS[activePersona].temperature !== undefined) ? PERSONA_CONFIGS[activePersona].temperature : 0.75;
+
+            // Build text context for the prompt
             let contextPrompt = "";
             if (contextDoc && contextDoc.trim()) {
                 contextPrompt = `\n\n【前提資料・アジェンダ】\n${contextDoc.trim()}\n------------------------------`;
@@ -2051,21 +2068,40 @@
                 recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】です。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
             }
 
-            const systemRule = `【システム指示】
-${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}
+            // ビジネス用語クリシェ排除フィルター
+            let clicheRule = `\n\n【表現の禁止・推奨ルール】
+以下の曖昧で中身のないビジネス用語（コーポレート・クリシェ）の使用は【厳格に禁止】します。
+・禁止語:「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」「最大化」「推進」「ベクトルを合わせる」
+代わりに、より具体的でリアルな実務語彙、または対立軸を突く具体的な指摘を用い、簡潔に提案してください。`;
 
-------------------------------
-【これまでの会話ログ】`;
+            // 会議アジェンダ進行フェーズ連動ルール
+            let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            if (steps.length === 0) {
+                steps = ["前提", "課題", "施策", "実現性", "まとめ"];
+            }
+            let isEarlyPhase = (currentPhase <= 2 || currentPhase <= Math.ceil(steps.length / 2));
+            let agendaPhaseRule = "";
+            if (isEarlyPhase) {
+                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
+現在は会議の前半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '前提・課題'} ]）です。
+アイデア発想や論点整理のために、「そもそも〜という前提や意図は何ですか？」「見落としている根本的な課題は何か」といった、前提や課題の核心に迫る「本質的な問いかけ」や「対立軸の指摘」を優先してください。`;
+            } else {
+                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
+現在は会議の後半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '施策・実現性'} ]）です。
+具体的な実行可能性や合意形成のために、リソース、スケジュール、役割分担などの「実行上のボトルネックを指摘する現実的な論点」や「対立点を統合する折衷案・次のステップの提言」を優先してください。`;
+            }
+
+            // Native systemInstruction payload construction
+            const systemRule = `【システム指示】
+${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}${clicheRule}${agendaPhaseRule}`;
+            
             const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
-            const userPromptText = `${systemRule}\n${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
+            const userPromptText = `${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
 
             // Update debug panel with prompt
             const debugPanel = document.getElementById('debug-info-panel');
-            if (debugPanel) {
-                debugPanel.textContent = `=== [SENDING PROMPT] ===\n${userPromptText}\n\n=== [AWAITING RESPONSE] ===`;
-            }
 
-            // Payload with maxOutputTokens increased to 1000 and safetySettings set to BLOCK_NONE
+            // Payload with native systemInstruction and persona-based temperature
             const payload = {
                 contents: [
                     {
@@ -2073,8 +2109,11 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                         parts: [{ text: userPromptText }]
                     }
                 ],
+                systemInstruction: {
+                    parts: [{ text: systemRule }]
+                },
                 generationConfig: {
-                    temperature: 0.75,
+                    temperature: personaTemp,
                     maxOutputTokens: 1000
                 },
                 safetySettings: [
@@ -2149,7 +2188,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 if (debugPanel) {
                     // Render raw JSON response nicely for developer debugging
                     const prettyResponse = JSON.stringify(data, null, 2);
-                    debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
+                    debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
                 }
 
                 const aiResponseText = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) ? data.candidates[0].content.parts[0].text : null;
@@ -2173,7 +2212,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 updateStatus("API ERROR", "error");
                 
                 if (debugPanel) {
-                    debugPanel.textContent = `=== [SENT PROMPT] ===\n${userPromptText}\n\n=== [ERROR] ===\n${err.message}`;
+                    debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [ERROR] ===\n${err.message}`;
                 }
                 
                 // Show detailed error message on the prompter screen
@@ -2194,7 +2233,6 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             }
         }
 
-        // --- Parsing AI response ---
         function parseAndDisplayOutput(rawText) {
             const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
