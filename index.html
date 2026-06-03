@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>AI Prompter - Hands-free Real-time AI Prompter</title>
+    <title>stealth brain - Hands-free Real-time AI Prompter</title>
     <!-- Google Fonts: Outfit (Premium & Modern Sans-serif) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,614 +30,47 @@
         }
 
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background-color: var(--bg-color);
             color: var(--text-main);
-            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            height: 100vh;
-            height: -webkit-fill-available;
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             overflow: hidden;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            position: relative;
         }
 
-        /* App Brand Header Styles */
+        /* App Header */
         .app-header {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 14px 20px 2px;
-            z-index: 10;
-            box-sizing: border-box;
-        }
-        .brand-container {
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 12px 24px;
+            z-index: 100;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
-        .brand-icon {
+        #app-logo {
             width: 18px;
             height: 18px;
-            border-radius: 4px;
-            object-fit: cover;
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+            object-fit: contain;
         }
-        .brand-title {
-            font-size: 13px;
-            font-weight: 800;
+        #app-title {
+            font-size: 14px;
+            font-weight: 900;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: #ffffff;
-            opacity: 0.9;
-        }
-
-        /* API Key Warning Banner */
-        #api-warning {
-            background: rgba(255, 59, 48, 0.15);
-            border-bottom: 1px solid rgba(255, 59, 48, 0.3);
-            color: #ff453a;
-            padding: 10px 15px;
-            font-size: 13px;
-            font-weight: 600;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            cursor: pointer;
-            z-index: 99;
-        }
-
-        /* Prompter Display Container */
-        .prompter-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            text-align: left;
-            position: relative;
-        }
-
-        #prompter-text {
-            font-size: var(--font-size-base);
-            font-weight: 900;
-            line-height: 1.4;
-            letter-spacing: -0.018em;
-            word-break: break-all;
-            white-space: pre-wrap;
-            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
-            width: 100%;
-            max-width: 100%;
-            text-align: left;
-            opacity: 1;
-            transform: translateY(0);
-        }
-        #prompter-text.transitioning {
-            opacity: 0;
-            transform: translateY(12px);
-        }
-        #prompter-text.initial-placeholder {
-            font-size: calc(var(--font-size-base) * 0.7) !important;
-            font-weight: 500;
-            opacity: 0.65;
-            text-shadow: none !important;
-        }
-
-        /* Styling Classes mapped dynamically from tags */
-        .style-white {
-            color: var(--color-white) !important;
-            text-shadow: 0 0 20px var(--glow-white);
-        }
-
-        .style-yellow {
-            color: var(--color-yellow) !important;
-            text-shadow: 0 0 25px var(--glow-yellow);
-        }
-
-        .style-red {
-            color: var(--color-red) !important;
-            text-shadow: 0 0 25px var(--glow-red);
-        }
-
-        /* Silence countdown progress bar (Integrated into the top edge of floating dock) */
-        .progress-bar-container {
-            width: calc(100% - 60px);
-            height: 2px;
-            background: transparent;
-            position: absolute;
-            top: -1px;
-            left: 30px;
-            overflow: hidden;
-            z-index: 12;
-        }
-
-        #silence-progress {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #30d158, #ffcc00);
-            transition: width 0.1s linear, background-color 0.3s;
-            box-shadow: 0 0 6px rgba(48, 209, 88, 0.8);
-        }
-
-        /* Debug / Live Transcript Preview */
-        .live-preview-container {
-            padding: 12px 20px;
-            text-align: center;
-            min-height: 100px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 4px;
-        }
-
-        #live-transcript {
-            font-size: 13px;
-            color: var(--text-dim);
-            font-weight: 500;
-            max-width: 85%;
-            display: -webkit-box;
-            -webkit-line-clamp: 5;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: normal;
-            min-height: 90px;
-            opacity: 0.85;
-            transition: color 0.2s;
-            line-height: 1.4;
-            text-align: left;
-        }
-
-        #live-transcript.active {
-            color: #30d158;
-        }
-
-        /* Controller Bar (Floating dock design) */
-        .controller-bar {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
-            padding: 12px 24px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-            border-radius: 30px;
-            z-index: 10;
-            margin: 0 16px 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            position: relative;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background-color: var(--text-dark);
-            transition: background-color 0.3s, box-shadow 0.3s;
-        }
-
-        .status-dot.active {
-            background-color: #30d158;
-            box-shadow: 0 0 10px rgba(48, 209, 88, 0.6);
-        }
-
-        .status-dot.thinking {
-            background-color: #0a84ff;
-            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
-            animation: pulse 1.2s infinite alternate;
-        }
-
-        .status-dot.error {
-            background-color: var(--color-red);
-            box-shadow: 0 0 10px var(--glow-red);
-        }
-
-        /* Minimal circular Start/Stop Toggle Button with ripple glow */
-        .btn-toggle {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.12);
             color: var(--text-main);
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            padding: 0;
-            position: relative;
         }
 
-        .btn-toggle:active {
-            transform: scale(0.92);
-        }
-
-        .btn-toggle.recording {
-            background: rgba(255, 59, 48, 0.15);
-            border-color: rgba(255, 59, 48, 0.4);
-            color: #ff453a;
-            box-shadow: 0 0 15px rgba(255, 59, 48, 0.2);
-            animation: recordPulse 2s infinite ease-in-out;
-        }
-
-        @keyframes recordPulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(255, 59, 48, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
-        }
-
-        .btn-icon-settings {
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 10px;
-            color: var(--text-dim);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s, transform 0.2s;
-        }
-
-        .btn-icon-settings:hover, .btn-icon-settings:active {
-            color: var(--text-main);
-            transform: rotate(30deg);
-        }
-
-        /* Settings Drawer overlay */
-        .settings-drawer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(12, 12, 12, 0.95);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(30px);
-            -webkit-backdrop-filter: blur(30px);
-            border-top-left-radius: 28px;
-            border-top-right-radius: 28px;
-            z-index: 100;
-            transform: translateY(100%);
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 85vh;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        .settings-drawer.open {
-            transform: translateY(0);
-        }
-
-        .drawer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .drawer-header h3 {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: -0.01em;
-        }
-
-        .btn-close {
-            background: rgba(255, 255, 255, 0.08);
-            border: none;
-            color: var(--text-main);
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .btn-close:active {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* Form Controls inside Drawer */
-        .form-group {
-            margin-bottom: 18px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .form-group label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .form-group input, .form-group textarea, .form-group select {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-family: inherit;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .form-group select option {
-            background-color: #121212;
-            color: #ffffff;
-        }
-
-        .api-key-input-container {
-            display: flex;
-            gap: 8px;
-        }
-
-        .api-key-input-container input {
-            flex: 1;
-        }
-
-        .btn-small {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: var(--text-main);
-            padding: 0 15px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-small:active {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .font-size-controls {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .font-size-val {
-            font-size: 14px;
-            font-weight: 700;
-            min-width: 50px;
-            text-align: center;
-        }
-
-        /* History preview block */
-        .history-list {
-            max-height: 120px;
-            overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            padding: 8px 12px;
-            font-size: 12px;
-            color: var(--text-dim);
-            line-height: 1.5;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .history-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-            padding-bottom: 4px;
-            word-break: break-all;
-        }
-
-        .history-item:last-child {
-            border-bottom: none;
-            padding-bottom: 0;
-        }
-
-        .history-empty {
-            text-align: center;
-            padding: 10px;
-            color: var(--text-dark);
-            font-style: italic;
-        }
-
-        /* Main Screen Suggestion History Container */
-        .main-history-container {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            border-radius: 16px;
-            margin: 0 24px 10px;
-            padding: 10px 14px;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 150px; /* Expanded default height to show suggestions */
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            cursor: pointer;
-            z-index: 15;
-        }
-
-        .main-history-container.focused {
-            max-height: 380px; /* Expanded focused height to scroll suggestions */
-            background: rgba(12, 12, 12, 0.95);
-            border-color: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
-        }
-
-        .main-history-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--text-dim);
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            padding-bottom: 2px;
-        }
-
-        .main-history-container.focused .main-history-header {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 6px;
-        }
-
-        .main-history-clear-btn {
-            display: none; /* Hidden by default when collapsed */
-            color: #ff453a;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            padding: 2px 6px;
-            background: rgba(255, 59, 48, 0.15);
-            border-radius: 4px;
-            border: 1px solid rgba(255, 59, 48, 0.2);
-            transition: background 0.2s;
-        }
-
-        .main-history-clear-btn:active {
-            background: rgba(255, 59, 48, 0.3);
-        }
-
-        .main-history-container.focused .main-history-clear-btn {
-            display: inline-block; /* Show clear button only when focused */
-        }
-
-        .main-history-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            overflow: hidden; /* Hide scroll in collapsed state */
-            flex: 1;
-        }
-
-        .main-history-container.focused .main-history-list {
-            overflow-y: auto; /* Show scroll in focused state */
-        }
-
-        /* Styling for items in main history */
-        .main-history-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            padding: 6px 4px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            transition: background 0.2s;
-            border-radius: 4px;
-        }
-
-        .main-history-item:hover, .main-history-item:active {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .main-history-item:last-child {
-            border-bottom: none;
-        }
-
-        .main-history-meta {
-            display: flex;
-            justify-content: space-between;
-            font-size: 9.5px;
-            font-weight: 600;
-        }
-
-        .main-history-text {
-            font-size: 11.5px;
-            color: #dddddd;
-            line-height: 1.35;
-            white-space: pre-wrap;
-            word-break: break-all;
-            text-align: left;
-        }
-
-
-        .settings-footer {
-            margin-top: 24px;
-            display: flex;
-            gap: 10px;
-        }
-
-        .settings-footer button {
-            flex: 1;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: #ffffff;
-            color: #000000;
-        }
-
-        .btn-primary:active {
-            background: #dddddd;
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.08);
-            color: var(--text-main);
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        }
-
-        .btn-secondary:active {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        /* Animations */
-        @keyframes pulse {
-            0% {
-                opacity: 0.4;
-            }
-            100% {
-                opacity: 1;
-                box-shadow: 0 0 15px rgba(10, 132, 255, 0.8);
-            }
-        }
-
-        /* Screen Rotate Lock Tips */
-        @media (orientation: landscape) {
-            :root {
-                --font-size-base: 5.5vh;
-            }
-        }
         /* Edge Glow Overlays */
         .edge-glow {
             position: fixed;
@@ -668,7 +101,7 @@
             border-radius: 30px;
             padding: 4px;
             gap: 2px;
-            margin: 8px auto 8px;
+            margin: 8px auto 4px;
             max-width: 90%;
             width: fit-content;
             align-self: center;
@@ -679,86 +112,517 @@
             font-weight: 600;
             color: rgba(255, 255, 255, 0.5);
             padding: 7px 18px;
-            border-radius: 26px;
-            border: none;
-            background: transparent;
+            border-radius: 20px;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            white-space: nowrap;
-        }
-        .persona-tab.active {
-            color: #ffffff;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-
-        /* Agenda Progress Bar Styles */
-        .agenda-progress-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 6px;
-            margin: 0 auto 12px;
-            max-width: 95%;
-            width: fit-content;
-            font-size: 10px;
-            color: #333333;
-            z-index: 10;
+            transition: all 0.2s ease;
             user-select: none;
         }
+        .persona-tab.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
 
+        /* Agenda Progress line */
+        .agenda-progress-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin: 4px auto 8px;
+            max-width: 90%;
+            width: fit-content;
+            align-self: center;
+            z-index: 10;
+        }
         .agenda-step {
             display: flex;
             align-items: center;
             gap: 4px;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            font-weight: 500;
-            color: #444444; /* Default dim grey */
+            font-size: 10px;
+            color: var(--text-dim);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
         }
-
         .agenda-dot {
             font-size: 11px;
             line-height: 1;
         }
-
         .agenda-text {
             font-size: 10px;
             letter-spacing: -0.01em;
         }
-
         .agenda-connector {
-            color: #1a1a1a;
+            color: rgba(255, 255, 255, 0.15);
             font-size: 9px;
             letter-spacing: -1.5px;
             padding: 0 2px;
             user-select: none;
         }
-
-        /* Active Glow highlights synchronized with edge glows */
         .agenda-step.active-white {
             color: var(--color-white) !important;
             font-weight: 800;
             text-shadow: 0 0 10px var(--glow-white);
         }
-
         .agenda-step.active-yellow {
             color: var(--color-yellow) !important;
             font-weight: 800;
             text-shadow: 0 0 12px var(--glow-yellow);
         }
-
         .agenda-step.active-red {
             color: var(--color-red) !important;
             font-weight: 800;
             text-shadow: 0 0 12px var(--glow-red);
         }
 
-
-        
-        /* Layout fixes for alignment */
+        /* Prompter Area */
         .prompter-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            text-align: left;
+            position: relative;
+            width: 100%;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        #prompter-text {
+            font-size: var(--font-size-base);
+            font-weight: 900;
+            line-height: 1.4;
+            letter-spacing: -0.018em;
+            word-break: break-all;
+            white-space: pre-wrap;
+            transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), text-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+            width: 100%;
+            max-width: 100%;
+            text-align: left;
+            opacity: 1;
+            transform: translateY(0);
+        }
+        #prompter-text.transitioning {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+        #prompter-text.initial-placeholder {
+            font-size: calc(var(--font-size-base) * 0.7) !important;
+            font-weight: 500 !important;
+            opacity: 0.65 !important;
+            text-shadow: none !important;
+            color: var(--text-dim) !important;
+            text-align: center !important;
+        }
+
+        .style-white {
+            color: var(--color-white) !important;
+            text-shadow: 0 0 20px var(--glow-white);
+        }
+        .style-yellow {
+            color: var(--color-yellow) !important;
+            text-shadow: 0 0 25px var(--glow-yellow);
+        }
+        .style-red {
+            color: var(--color-red) !important;
+            text-shadow: 0 0 25px var(--glow-red);
+        }
+
+        /* Copilot Mode Specific UI */
+        .copilot-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            justify-content: flex-start;
+            gap: 16px;
+        }
+        .copilot-recommend {
+            font-weight: 900;
+            line-height: 1.4;
+            letter-spacing: -0.018em;
+            word-break: break-all;
+            white-space: pre-wrap;
+            color: var(--color-white) !important;
+            text-shadow: 0 0 20px var(--glow-white);
+        }
+        .copilot-tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 2px;
+        }
+        .copilot-tag-badge {
+            background: rgba(255, 204, 0, 0.15);
+            border: 1px solid rgba(255, 204, 0, 0.3);
+            color: var(--color-yellow);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 20px;
+            text-shadow: 0 0 8px var(--glow-yellow);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .copilot-state-container {
+            margin-top: auto;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: monospace;
+            font-size: 11.5px;
+            line-height: 1.5;
+            color: var(--text-dim);
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Main Screen Suggestion History Container */
+        .main-history-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 16px;
+            margin: 0 24px 10px;
+            padding: 10px 14px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 150px; /* Collapsed: show ~3 suggestions */
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 15;
+        }
+        .main-history-container.focused {
+            max-height: 380px; /* Expanded focused height */
+            background: rgba(12, 12, 12, 0.95);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+        .main-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-dim);
+        }
+        .main-history-title {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .main-history-clear-btn {
+            color: var(--color-red);
+            font-weight: 700;
+            cursor: pointer;
+            display: none;
+        }
+        .main-history-container.focused .main-history-clear-btn {
+            display: inline-block;
+        }
+        .main-history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .main-history-container.focused .main-history-list {
+            overflow-y: auto;
+        }
+        .main-history-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 6px 4px;
+            cursor: pointer;
+        }
+        .main-history-item:last-child {
+            border-bottom: none;
+        }
+        .main-history-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9.5px;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 2px;
+        }
+        .main-history-text {
+            font-size: 11.5px;
+            color: #dddddd;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            word-break: break-all;
+            text-align: left;
+        }
+        .history-empty {
+            text-align: center;
+            padding: 10px;
+            color: var(--text-dark);
+            font-style: italic;
+            font-size: 12px;
+        }
+
+        /* Speech Recognition Transcript Preview */
+        .live-preview-container {
+            padding: 12px 24px;
+            min-height: 100px;
+            display: flex;
             flex-direction: column;
             justify-content: center;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        #live-transcript {
+            font-size: 13px;
+            color: var(--text-dim);
+            font-weight: 500;
+            width: 100%;
+            display: -webkit-box;
+            -webkit-line-clamp: 5;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: normal;
+            min-height: 90px;
+            opacity: 0.85;
+            transition: color 0.2s;
+            line-height: 1.4;
+            text-align: left;
+        }
+        #live-transcript.active {
+            color: #30d158;
+        }
+
+        /* Controller Bar (Floating dock design) */
+        .controller-bar {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(20, 20, 20, 0.85);
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 16px 24px;
+            gap: 16px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 100;
+        }
+        .progress-bar-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2.2px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        #silence-progress {
+            width: 0%;
+            height: 100%;
+            background: #0a84ff;
+            transition: width 0.1s linear;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--text-dark);
+            transition: all 0.3s ease;
+        }
+        .status-dot.active {
+            background-color: #30d158;
+            box-shadow: 0 0 10px rgba(48, 209, 88, 0.6);
+        }
+        .status-dot.thinking {
+            background-color: #0a84ff;
+            box-shadow: 0 0 10px rgba(10, 132, 255, 0.6);
+            animation: pulse 1.2s infinite alternate;
+        }
+        .status-dot.error {
+            background-color: var(--color-red);
+            box-shadow: 0 0 10px var(--glow-red);
+        }
+        #status-text {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+        }
+        .btn-toggle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-toggle:active {
+            transform: scale(0.95);
+        }
+        .btn-toggle.recording {
+            background: #ff3b30;
+            border-color: #ff453a;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(255, 59, 48, 0.35);
+        }
+        .btn-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background 0.2s, color 0.2s;
+        }
+        .btn-icon:active {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+        }
+
+        /* Settings Drawer Slider styling */
+        .settings-drawer {
+            position: fixed;
+            left: 0;
+            bottom: -100%;
+            width: 100%;
+            height: 85vh;
+            background: rgba(10, 10, 10, 0.96);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-top-left-radius: 28px;
+            border-top-right-radius: 28px;
+            transition: bottom 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 2000;
+            padding: 24px;
+            box-sizing: border-box;
+            overflow-y: auto;
+        }
+        .settings-drawer.open {
+            bottom: 0;
+        }
+        .drawer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 12px;
+        }
+        .drawer-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+        .btn-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: var(--text-main);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 16px;
+        }
+        .btn-close:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="password"],
+        .form-group select,
+        .form-group textarea {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+        .form-group input[type="text"]:focus,
+        .form-group input[type="password"]:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+        .form-group select option {
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .api-key-input-container {
+            display: flex;
+            gap: 8px;
+            width: 100%;
+        }
+        .btn-small {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            padding: 0 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-small:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .font-size-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .font-size-val {
+            font-size: 14px;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
         }
 
         /* On-device file upload card style */
@@ -775,7 +639,8 @@
             gap: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-bottom: 12px;
+            margin-bottom: 4px;
+            width: 100%;
         }
         .file-upload-card:active {
             border-color: rgba(255, 255, 255, 0.35);
@@ -796,6 +661,72 @@
             color: var(--text-dim);
             margin-top: 2px;
             display: block;
+        }
+
+        .settings-footer {
+            margin-top: 24px;
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+        .settings-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            height: 48px;
+        }
+        .btn-primary {
+            background: #ffffff;
+            color: #000000;
+        }
+        .btn-primary:active {
+            background: #dddddd;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        }
+        .btn-secondary:active {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Warning banner */
+        #api-warning {
+            background-color: #ffcc00;
+            color: #000000;
+            padding: 10px 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            cursor: pointer;
+            z-index: 90;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 15px rgba(10, 132, 255, 0.8);
+            }
+        }
+
+        @media (orientation: landscape) {
+            :root {
+                --font-size-base: 5.5vh;
+            }
         }
     </style>
 </head>
@@ -819,52 +750,44 @@
 
     <!-- App Brand Header -->
     <div class="app-header">
-        <div class="brand-container">
-            <img src="stealth_brain_icon.png" alt="Icon" class="brand-icon">
-            <span class="brand-title">stealth brain</span>
-        </div>
+        <img id="app-logo" src="stealth_brain_icon.png" alt="logo" onerror="this.style.display='none';">
+        <span id="app-title">stealth brain</span>
     </div>
 
-    <!-- AI Persona Selector Tabs -->
-    <div class="persona-tabs">
+    <!-- Capsule Persona Tabs -->
+    <div class="persona-tabs" style="margin-top: 52px;">
         <div id="tab-debate" class="persona-tab active" onclick="switchPersona('debate')">戦略</div>
         <div id="tab-brainstorm" class="persona-tab" onclick="switchPersona('brainstorm')">アイデア</div>
         <div id="tab-facilitate" class="persona-tab" onclick="switchPersona('facilitate')">進行</div>
     </div>
 
-    <!-- Agenda Progress Line (Dynamic dots and low-contrast labels) -->
+    <!-- Agenda Progress Line -->
     <div id="agenda-progress-bar" class="agenda-progress-container"></div>
 
     <!-- Prompter area -->
     <div class="prompter-container" onclick="handlePrompterTap()">
-        <div id="prompter-text" class="style-white initial-placeholder">
-            会話を開始すると<br>
-            ここに次の発言候補が<br>
-            リアルタイム表示されます
-        </div>
+        <div id="prompter-text" class="style-white initial-placeholder">会話を開始すると<br>ここに次の発言候補が<br>リアルタイム表示されます</div>
     </div>
 
-    <!-- Main Screen Suggestion History (Constantly visible, clickable to expand/scroll) -->
+    <!-- Main Screen Suggestion History (発言候補履歴) -->
     <div id="main-ai-history" class="main-history-container" onclick="handleHistoryContainerClick(event)">
         <div class="main-history-header">
             <span class="main-history-title">発言候補履歴</span>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="main-history-clear" class="main-history-clear-btn" onclick="clearAiHistory(event)">クリア</span>
-            </div>
+            <span id="main-history-clear" class="main-history-clear-btn" onclick="clearAiHistory(event)">クリア</span>
         </div>
         <div id="main-history-list" class="main-history-list">
             <div class="history-empty">発言候補履歴はありません。</div>
         </div>
     </div>
 
-    <!-- Live low-contrast speech preview & debug display -->
+    <!-- Live low-contrast speech preview -->
     <div class="live-preview-container">
         <div id="live-transcript">マイク：待機中</div>
     </div>
 
     <!-- Controller Bar -->
     <div class="controller-bar">
-        <!-- Thin countdown progress bar integrated directly into the top edge of the floating dock -->
+        <!-- Thin countdown progress bar -->
         <div class="progress-bar-container">
             <div id="silence-progress"></div>
         </div>
@@ -874,38 +797,35 @@
             <span id="status-text">STOPPED</span>
         </div>
 
-        <button id="btn-start-stop" class="btn-toggle" onclick="toggleRecording()" title="録音開始/停止">
-            <svg id="icon-recording" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="display: none; color: #ff3b30;">
-                <rect x="6" y="6" width="12" height="12" rx="2"/>
+        <button id="btn-start-stop" class="btn-toggle" onclick="toggleListening()">
+            <svg id="icon-recording" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor"/>
             </svg>
-            <svg id="icon-idle" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color: #30d158;">
-                <polygon points="6 4 20 12 6 20 6 4"/>
+            <svg id="icon-idle" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/>
             </svg>
         </button>
 
-
-        <button class="btn-icon-settings" onclick="toggleSettings(true)">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="btn-icon" onclick="toggleSettings(true)">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
         </button>
     </div>
 
-    <!-- Settings Overlay Drawer -->
+    <!-- Settings Drawer -->
     <div id="settings-drawer" class="settings-drawer">
         <div class="drawer-header">
-            <h3>プロンプター設定</h3>
-            <button class="btn-close" onclick="toggleSettings(false)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+            <h3>設定</h3>
+            <button class="btn-close" onclick="toggleSettings(false)">×</button>
         </div>
 
         <div class="form-group">
-            <label for="setting-api-key">Gemini API キー</label>
+            <label>Gemini API キー</label>
             <div class="api-key-input-container">
-                <input type="password" id="setting-api-key" placeholder="AIzaSy...">
-                <button class="btn-small" onclick="toggleApiKeyVisibility(event)">表示</button>
+                <input type="password" id="setting-api-key" placeholder="AI StudioのAPIキーを入力">
+                <button class="btn-small" id="btn-toggle-key-visibility" onclick="toggleApiKeyVisibility(event)">表示</button>
             </div>
         </div>
 
@@ -914,14 +834,9 @@
             <select id="setting-model-name">
                 <option value="gemini-2.5-flash-lite" selected>Gemini 2.5 Flash Lite (推奨)</option>
                 <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2-flash">Gemini 2 Flash</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                 <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
             </select>
-        </div>
-
-        <div class="form-group">
-            <label for="setting-agenda-presets">アジェンダ・プリセット（カンマ区切り）</label>
-            <input type="text" id="setting-agenda-presets" placeholder="前提, 課題, 施策, 実現性, まとめ" value="前提, 課題, 施策, 実現性, まとめ">
         </div>
 
         <div class="form-group">
@@ -943,9 +858,9 @@
         <div class="form-group">
             <label>プロンプター文字サイズ</label>
             <div class="font-size-controls">
-                <button class="btn-small" onclick="adjustFontSize(-0.5)">縮小 -</button>
+                <button class="btn-small" onclick="adjustFontSize(-0.5)" style="flex:1; height:36px;">縮小 -</button>
                 <div id="font-size-display" class="font-size-val">6.5vw</div>
-                <button class="btn-small" onclick="adjustFontSize(0.5)">拡大 +</button>
+                <button class="btn-small" onclick="adjustFontSize(0.5)" style="flex:1; height:36px;">拡大 +</button>
             </div>
         </div>
 
@@ -960,66 +875,32 @@
         </div>
 
         <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <label for="setting-context-doc">会議の前提資料・アジェンダ等（任意）</label>
-                <button type="button" class="btn-small" id="btn-clear-file" onclick="clearFileAttachment(event)" style="font-size: 11px; padding: 2px 8px; height: auto; border: 1px solid rgba(255, 59, 48, 0.4); background: rgba(255, 59, 48, 0.1); color: #ff453a; display: none;">削除</button>
-            </div>
+            <label style="display:flex; justify-content:space-between; align-items:center;">
+                前提資料・アジェンダ等（任意）
+                <button id="btn-clear-file" class="btn-small" onclick="clearFileAttachment(event)" style="display:none; background:rgba(255, 59, 48, 0.15); color:#ff453a; border-color:rgba(255, 59, 48, 0.3); font-size:11px; margin-left: 8px; height:24px; padding: 0 10px;">削除</button>
+            </label>
             <div class="file-upload-card" onclick="document.getElementById('setting-file-input').click()">
-                <input type="file" id="setting-file-input" accept=".txt,.md,.csv,.pdf" style="display: none;" onchange="handleFileAttachment(this)">
+                <input type="file" id="setting-file-input" accept=".txt,.md,.csv,.pdf,.json" style="display: none;" onchange="handleFileAttachment(this)">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-                <span>ファイルを添付 (TXT, MD, CSV, PDF)</span>
-                <span id="file-upload-status">タップして資料を選択</span>
+                <span id="file-upload-status">ファイルを添付 (TXT, MD, CSV, PDF, JSON)</span>
             </div>
-            <textarea id="setting-context-doc" rows="4" placeholder="資料から読み込まれた内容や、アジェンダなどをここに貼り付けて編集します。" style="resize: vertical;"></textarea>
+            <textarea id="setting-context-doc" rows="4" placeholder="添付資料から抽出されたテキストや、手動でアジェンダや前提文を入力できます..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="setting-agenda-presets">アジェンダ・プリセット（カンマ区切り）</label>
+            <input type="text" id="setting-agenda-presets" placeholder="前提, 課題, 施策, 実現性, まとめ" value="前提, 課題, 施策, 実現性, まとめ">
         </div>
 
         <div class="form-group">
             <label for="setting-system-prompt">Gemini システムプロンプト</label>
-            <textarea id="setting-system-prompt" rows="5" style="resize: vertical;">あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
-
-【入力テキストの誤認識に対する超訳ルール】
-入力される会話ログは、Web会議の音声を機械的に文字起こしした「不完全な生データ」です。ノイズや滑舌により、激しい誤字脱字、同音異義語の誤変換（例：「エスオーシー」等の謎のカタカナや、言葉の詰まり）が大量に含まれます。
-あなたはこれらを文字通りに受け取らず、前後の文脈、および事前に与えられた【プロジェクトの前提情報】から、本来発言者が言いたかった「真の意図」をサイレントに超訳・推測した上で、戦略分析を行ってください。
-（例：「仕様の差分」「工数の共有」など、実務的に意味の通る言葉へ脳内補正すること）
-
-【ルール】
-1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
-2. ユーザーがその場で口にすることで、議論のレベルが一気に上がるような「具体的な根拠、対立軸の指摘、懸念点、あるいは代替案」を提案してください。限られた文字数の中に、思考の「密度」を限界まで凝縮してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(```)は含めないでください。
-
-【タグの選定基準】
-- [WHITE] ：鋭い指摘、納得感のある根拠、建設的な提案、本質を突く質問。
-- [YELLOW]：議論が本質から脱線している際、本質的なアジェンダに強引に引き戻すための切り口。
-- [RED]    ：対立が起きている際、相手の主張の矛盾を突くカウンター、または決定的な妥協案。
-
-例（薄っぺらいNG例）：
-[WHITE]
-賛成です。
-どう思いますか？
-進めましょう。
-
-例（深みのあるOK例）：
-[WHITE]
-競合A社の失敗は
-開発遅延が原因。
-その点を確認する。</textarea>
+            <textarea id="setting-system-prompt" rows="5" style="resize: vertical; font-size:12px;"></textarea>
         </div>
-
 
         <div class="form-group">
             <label style="display:flex; justify-content:space-between; align-items:center;">
-                会話ログ（裏のメモリ）
-                <button class="btn-small" onclick="clearHistory()" style="background:rgba(255,59,48,0.1); color:#ff453a; border-color:rgba(255,59,48,0.2);">クリア</button>
-            </label>
-            <div id="history-preview" class="history-list">
-                <div class="history-empty">会話履歴はありません。</div>
-            </div>
-        </div>
-
-        <div class="form-group" style="margin-top: 15px;">
-            <label style="display:flex; justify-content:space-between; align-items:center;">
                 詳細デバッグ情報 (開発者向け)
-                <button class="btn-small" onclick="toggleDebugInfo(event)" style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1);">表示</button>
+                <button class="btn-small" onclick="toggleDebugInfo(event)" style="background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.1); height:24px; padding: 0 10px;">表示</button>
             </label>
             <div id="debug-info-panel" style="display: none; font-size: 11px; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); max-height: 200px; overflow-y: auto; word-break: break-all; white-space: pre-wrap; font-family: monospace; color: #888888; line-height: 1.4;">
                 APIリクエストを実行するとここに送受信ログが表示されます。
@@ -1034,16 +915,6 @@
     </div>
 
     <script>
-        // Global error handler to help mobile debugging
-        window.addEventListener('error', (event) => {
-            const banner = document.getElementById('js-error-banner');
-            const msgEl = document.getElementById('js-error-msg');
-            if (banner && msgEl) {
-                banner.style.display = 'block';
-                msgEl.textContent = `${event.message}\nat ${event.filename}:${event.lineno}:${event.colno}\n\nStack: ${event.error ? event.error.stack : 'N/A'}`;
-            }
-        });
-
         // --- Safe Storage Utility to bypass SecurityError inside strict WebViews / private browsing ---
         const safeStorage = {
             _data: {},
@@ -1104,6 +975,7 @@
         let contextDoc = ""; // 会議前提資料のテキスト
         let agendaPresets = "前提, 課題, 施策, 実現性, まとめ";
         let currentPhase = 1;
+        let lastStateUpdateText = ""; // Copilot Mode State cache
 
         const PERSONA_CONFIGS = {
             debate: {
@@ -1130,7 +1002,7 @@
             brainstorm: {
                 name: "アイデア",
                 temperature: 0.9,
-                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期セぬアナロジー」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
+                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期せぬアナロジー」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
 
 【入力テキストの誤認識に対する超訳ルール】
 入力される会話ログは、Web会議の音声を機械的に文字起こしした「不完全な生データ」です。ノイズや滑舌により、激しい誤字脱字、同音異義語の誤変換（例：「エスオーシー」等の謎のカタカナや、言葉の詰まり）が大量に含まれます。
@@ -1151,22 +1023,29 @@
             facilitate: {
                 name: "進行",
                 temperature: 0.6,
-                prompt: `あなたは会議を円滑に進め、全員の知恵を引き出す超優秀な「ファシリテーター（対話促進役）」です。会話ログを分析し、対立を和らげて合意形成に向かわせるための「論点の整理、対立点の昇華（アウフヘーベン）、議論を前に進めるための良い問いかけ」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
+                prompt: `あなたは会議を進める人間のファシリテーターを支援する「AI副操縦士（カンペ）」です。
+以下のルールに従って、ファシリテーターが口頭で言うべき推奨セリフ、次のアジェンダ/論点、および議論要約（State）を出力してください。
+
+【入力情報】
+毎ターン、以下の2つのみを受け取ります。
+1. 前のターンまでの議論要約 (State)
+2. 会話から得られた直近の文字起こし発言（3発言分）
+
+【出力フォーマット】
+以下のタグおよび構造のみを出力してください。解説や説明、マークダウンのコードブロック( \`\`\` )などは一切出力しないでください。
+
+【RECOMMEND】
+（ここに、ファシリテーターが「今すぐ口頭でそのまま発言すべき推奨セリフ」を1つの段落で出力してください。口頭で言って自然でシンプルな日本語とし、100〜150文字程度で、フランクかつ簡潔な問いかけや整理とします。「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」といった中身のないビジネス用語やクリシェは【厳格に禁止】します。具体的で伝わりやすい日本語に噛み砕いてください）
+
+【NEXT】
+・（次に議論すべきアジェンダの選択肢・論点タグを簡潔な箇条書きで最大3件提示してください。アジェンダ項目と連動させてください）
+
+【STATE_UPDATE】
+（議論の現在のステータスを3行以内の箇条書きで出力してください。現在の合意事項、対立点、未解決の問い）
+（最後に、全体のアジェンダ項目リストのうち現在位置しているフェーズ番号を [PHASE:インデックス番号] の形式で必ず付与してください。例: [PHASE:2]）
 
 【入力テキストの誤認識に対する超訳ルール】
-入力される会話ログは、Web会議の音声を機械的に文字起こしした「不完全な生データ」です。ノイズや滑舌により、激しい誤字脱字、同音異義語の誤変換（例：「エスオーシー」等の謎のカタカナや、言葉の詰まり）が大量に含まれます。
-あなたはこれらを文字通りに受け取らず、前後の文脈、および事前に与えられた【プロジェクトの前提情報】から、本来発言者が言いたかった「真の意図」をサイレントに超訳・推測した上で、ファシリテーション分析を行ってください。
-（例：「仕様の差分」「工数の共有」など、実務的に意味の通る言葉へ脳内補正すること）
-
-【ルール】
-1. 単に話を聞き流すだけや、「どうぞ」といった単調なオウム返しは【絶対に禁止】です。
-2. 对立する意見の共通点を見出したり、アジェンダに戻したり、誰もが納得しやすい折衷案を提示してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
-
-【タグの選定基準】
-- [WHITE] ：現在の議論の要点整理、次に合意すべきアジェンダの提示。
-- [YELLOW]：沈黙や停滞を打破する論点整理の問いかけ、またはアジェンダ引き戻し。
-- [RED]    ：対立する意見を統合する折衷案、または着地点の提案。`,
+入力される会話は音声認識による不完全な生データです。誤字脱字、同音異義語の誤変換、言葉の詰まり等は、前後の文脈や前提情報から本来の「真の意図」へサイレントに超訳した上で処理してください。`,
                 tag: "WHITE"
             }
         };
@@ -1175,74 +1054,58 @@
         function getSystemPromptForPersona(persona) {
             let loadedPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`);
             if (loadedPrompt) {
-                // 自動移行ロジック：古いハードコードされた文字数制限表記を、動的参照に変更する
                 loadedPrompt = loadedPrompt.replace(/全体で150[〜~]200文字程度/g, "指定された出力文字数制限に従い");
                 return loadedPrompt;
             }
             return (PERSONA_CONFIGS[persona] ? PERSONA_CONFIGS[persona].prompt : "");
         }
 
-        // --- Helper: Deduplicate Speech recognition results (handles Android Chrome duplication bug) ---
-        function mergeSpeechResults(results) {
-            let unified = "";
-            for (let i = 0; i < results.length; ++i) {
-                if (results[i].isFinal) {
-                    const txt = results[i][0].transcript.trim();
-                    if (!txt) continue;
-                    
-                    if (!unified) {
-                        unified = txt;
-                    } else {
-                        // 句読点と空白を除去して正規化比較を行う
-                        const cleanUnified = unified.replace(/[、。．，\s]/g, '');
-                        const cleanTxt = txt.replace(/[、。．，\s]/g, '');
-                        
-                        if (cleanTxt.startsWith(cleanUnified)) {
-                            // 累積による再送（Android Chromeの特有の挙動）：古い部分を包含する新しい結果で上書きする
-                            unified = txt;
-                        } else if (cleanUnified.startsWith(cleanTxt)) {
-                            // より短い古い情報が遅れて再送された場合：無視する
-                        } else {
-                            // 完全に新しい発話ブロック（通常のデスクトップ等）：空白を開けて結合する
-                            unified += " " + txt;
-                        }
-                    }
-                }
+        // --- Global error handler helper ---
+        window.addEventListener('error', (event) => {
+            const banner = document.getElementById('js-error-banner');
+            const msgEl = document.getElementById('js-error-msg');
+            if (banner && msgEl) {
+                banner.style.display = 'block';
+                msgEl.textContent = `${event.message}\nat ${event.filename}:${event.lineno}:${event.colno}\n\nStack: ${event.error ? event.error.stack : 'N/A'}`;
             }
-            return unified;
-        }
+        });
 
-        // --- Initialization ---
-        window.addEventListener('DOMContentLoaded', () => {
+        // --- Document initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
             try {
                 loadSettings();
             } catch (err) {
                 console.error("Error loading settings:", err);
             }
-            
+
+            // Bind clear file delete button
+            const fileDeleteBtn = document.getElementById('btn-clear-file');
+            if (fileDeleteBtn) {
+                fileDeleteBtn.addEventListener('click', clearFileAttachment);
+            }
+
+            // Setup document click listener to close suggestion history drawer when clicked outside
+            document.addEventListener('click', (e) => {
+                const container = document.getElementById('main-ai-history');
+                if (container && container.classList.contains('focused')) {
+                    if (!container.contains(e.target)) {
+                        container.classList.remove('focused');
+                    }
+                }
+            });
+
             try {
                 initSpeechRecognition();
             } catch (err) {
                 console.error("Error initializing speech recognition:", err);
-                updateStatus("NOT SUPPORTED", "error");
-                const liveEl = document.getElementById('live-transcript');
-                if (liveEl) {
-                    liveEl.textContent = "エラー: 音声認識の初期化に失敗しました。";
-                }
             }
-            
-            try {
-                updateUIState();
-            } catch (err) {
-                console.error("Error updating UI state:", err);
-            }
-            
+
             try {
                 setupSwipeGestures();
             } catch (err) {
                 console.error("Error setting up swipe gestures:", err);
             }
-            
+
             try {
                 checkApiKeyStatus();
             } catch (err) {
@@ -1251,17 +1114,6 @@
 
             document.addEventListener('visibilitychange', handleVisibilityChange);
         });
-
-        // --- Helper to get system prompt with auto-migration of old hardcoded character limits ---
-        function getSystemPromptForPersona(persona) {
-            let loadedPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`);
-            if (loadedPrompt) {
-                // 自動移行ロジック：古いハードコードされた文字数制限表記を、動的参照に変更する
-                loadedPrompt = loadedPrompt.replace(/全体で150[〜~]200文字程度/g, "指定された出力文字数制限に従い");
-                return loadedPrompt;
-            }
-            return (PERSONA_CONFIGS[persona] ? PERSONA_CONFIGS[persona].prompt : "");
-        }
 
         // --- Settings Management (localStorage via safeStorage) ---
         function loadSettings() {
@@ -1272,6 +1124,7 @@
             silenceDuration = parseFloat(safeStorage.getItem('ai_prompter_silence_duration')) || 2.0;
             agendaPresets = safeStorage.getItem('ai_prompter_agenda_presets') || "前提, 課題, 施策, 実現性, まとめ";
             outputLimit = parseInt(safeStorage.getItem('ai_prompter_output_limit')) || 200;
+            lastStateUpdateText = safeStorage.getItem('ai_prompter_last_state_update') || "";
             
             let savedPersona = safeStorage.getItem('ai_prompter_active_persona');
             if (!savedPersona || !PERSONA_CONFIGS[savedPersona]) {
@@ -1279,7 +1132,7 @@
             }
             activePersona = savedPersona;
             
-            systemPrompt = getSystemPromptForPersona(activePersona);
+            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${activePersona}`) || (PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].prompt : "");
             contextDoc = safeStorage.getItem('ai_prompter_context_doc') || "";
             
             const localHist = safeStorage.getItem('ai_prompter_history');
@@ -1294,6 +1147,8 @@
                 } catch(e) {
                     conversationHistory = [];
                 }
+            } else {
+                conversationHistory = [];
             }
 
             const savedAiHist = safeStorage.getItem('ai_prompter_ai_history');
@@ -1308,29 +1163,35 @@
                 } catch(e) {
                     aiSuggestionsHistory = [];
                 }
+            } else {
+                aiSuggestionsHistory = [];
             }
 
             // Sync with elements
             document.getElementById('setting-api-key').value = apiKey;
             document.getElementById('setting-model-name').value = modelName;
-            document.getElementById('setting-agenda-presets').value = agendaPresets;
             document.getElementById('setting-history-limit').value = historyLimit;
             document.getElementById('setting-system-prompt').value = systemPrompt;
             document.getElementById('setting-context-doc').value = contextDoc;
             document.getElementById('setting-silence-duration').value = silenceDuration;
             document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
-            document.getElementById('setting-output-limit').value = outputLimit;
-            document.getElementById('output-limit-display').textContent = outputLimit + "文字";
             
-            const btnClearFile = document.getElementById('btn-clear-file');
-            if (btnClearFile) {
-                btnClearFile.style.display = contextDoc ? "block" : "none";
+            const limitSlider = document.getElementById('setting-output-limit');
+            if (limitSlider) {
+                limitSlider.value = outputLimit;
+                updateOutputLimitDisplay(outputLimit);
+            }
+
+            const agendaPresetsInput = document.getElementById('setting-agenda-presets');
+            if (agendaPresetsInput) {
+                agendaPresetsInput.value = agendaPresets;
             }
             
             // Sync persona tabs
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
             const activeTab = document.getElementById(`tab-${activePersona}`);
             if (activeTab) activeTab.classList.add('active');
+            
             updateFontStyles();
             renderHistoryUI();
             renderAiHistoryUI();
@@ -1364,16 +1225,12 @@
             safeStorage.setItem('ai_prompter_agenda_presets', agendaPresets);
             safeStorage.setItem('ai_prompter_output_limit', outputLimit);
             
-            const btnClearFile = document.getElementById('btn-clear-file');
-            if (btnClearFile) {
-                btnClearFile.style.display = contextDoc ? "block" : "none";
-            }
-            
             // Save prompt for the active persona specifically
             safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
             
             renderAgendaProgressUI(currentPhase);
             checkApiKeyStatus();
+            updateFileDeleteButtonState();
             toggleSettings(false);
             
             console.log("Settings saved.");
@@ -1392,6 +1249,7 @@
                 safeStorage.removeItem('ai_prompter_ai_history');
                 safeStorage.removeItem('ai_prompter_agenda_presets');
                 safeStorage.removeItem('ai_prompter_output_limit');
+                safeStorage.removeItem('ai_prompter_last_state_update');
                 location.reload();
             }
         }
@@ -1417,31 +1275,45 @@
             document.getElementById('output-limit-display').textContent = val + "文字";
         }
 
-        function clearFileAttachment(e) {
-            if (e) e.stopPropagation();
-            if (confirm("添付資料を削除しますか？")) {
-                document.getElementById('setting-file-input').value = "";
-                document.getElementById('setting-context-doc').value = "";
-                document.getElementById('file-upload-status').textContent = "タップして資料を選択";
-                const btn = document.getElementById('btn-clear-file');
-                if (btn) btn.style.display = "none";
-                contextDoc = "";
-            }
-        }
-
         function checkApiKeyStatus() {
             const warningEl = document.getElementById('api-warning');
             if (!apiKey) {
-                warningEl.style.display = 'flex';
+                if (warningEl) warningEl.style.display = 'flex';
             } else {
-                warningEl.style.display = 'none';
+                if (warningEl) warningEl.style.display = 'none';
             }
         }
 
+        function toggleSettings(open) {
+            const drawer = document.getElementById('settings-drawer');
+            if (open) {
+                document.getElementById('setting-api-key').value = apiKey;
+                document.getElementById('setting-history-limit').value = historyLimit;
+                document.getElementById('setting-system-prompt').value = systemPrompt;
+                document.getElementById('setting-context-doc').value = contextDoc;
+                renderHistoryUI();
+                renderAiHistoryUI();
+                drawer.classList.add('open');
+            } else {
+                drawer.classList.remove('open');
+            }
+        }
+
+        function adjustFontSize(delta) {
+            fontSizeBase = Math.max(3.0, Math.min(12.0, fontSizeBase + delta));
+            safeStorage.setItem('ai_prompter_font_size', fontSizeBase);
+            document.getElementById('font-size-display').textContent = fontSizeBase.toFixed(1) + "vw";
+            updateFontStyles();
+        }
+
+        function updateFontStyles() {
+            document.documentElement.style.setProperty('--font-size-base', `${fontSizeBase}vw`);
+        }
+
         function toggleApiKeyVisibility(e) {
+            e.stopPropagation();
             const keyInput = document.getElementById('setting-api-key');
-            const evt = e || window.event;
-            const target = evt ? evt.target : null;
+            const target = e.target;
             if (keyInput.type === 'password') {
                 keyInput.type = 'text';
                 if (target) target.textContent = "隠す";
@@ -1472,8 +1344,6 @@
                     }
 
                     const arrayBuffer = await readFileAsArrayBuffer(file);
-                    
-                    // Setup PDF.js worker
                     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
                     
                     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -1506,11 +1376,12 @@
                         statusEl.style.color = "#30d158";
                     }
                 } else {
-                    throw new Error("サポートされていないファイル形式です。TXT, MD, CSV, PDFファイルを添付してください。");
+                    throw new Error("サポートされていないファイル形式です。TXT, MD, CSV, PDF, JSONファイルを添付してください。");
                 }
                 
-                const btn = document.getElementById('btn-clear-file');
-                if (btn) btn.style.display = "block";
+                contextDoc = textareaEl.value;
+                safeStorage.setItem('ai_prompter_context_doc', contextDoc);
+                updateFileDeleteButtonState();
             } catch (err) {
                 console.error("File loading error:", err);
                 if (statusEl) {
@@ -1540,111 +1411,87 @@
             });
         }
 
-        function toggleSettings(open) {
-            const drawer = document.getElementById('settings-drawer');
-            if (open) {
-                // Refresh values just in case
-                document.getElementById('setting-api-key').value = apiKey;
-                document.getElementById('setting-history-limit').value = historyLimit;
-                document.getElementById('setting-system-prompt').value = systemPrompt;
-                document.getElementById('setting-context-doc').value = contextDoc;
-                renderHistoryUI();
-                renderAiHistoryUI();
-                drawer.classList.add('open');
-            } else {
-                drawer.classList.remove('open');
+        function clearFileAttachment(e) {
+            if (e) e.stopPropagation();
+            if (confirm("添付資料を削除しますか？")) {
+                contextDoc = "";
+                safeStorage.removeItem('ai_prompter_context_doc');
+                
+                const textareaEl = document.getElementById('setting-context-doc');
+                if (textareaEl) {
+                    textareaEl.value = "";
+                }
+                
+                const statusEl = document.getElementById('file-upload-status');
+                if (statusEl) {
+                    statusEl.textContent = "ファイルを添付 (TXT, MD, CSV, PDF, JSON)";
+                    statusEl.style.color = "var(--text-dim)";
+                }
+                
+                const fileInput = document.getElementById('setting-file-input');
+                if (fileInput) fileInput.value = "";
+                
+                updateFileDeleteButtonState();
+                console.log("File attachment cleared.");
             }
         }
 
-        function adjustFontSize(delta) {
-            fontSizeBase = Math.max(3.0, Math.min(12.0, fontSizeBase + delta));
-            safeStorage.setItem('ai_prompter_font_size', fontSizeBase);
-            updateFontStyles();
+        function updateFileDeleteButtonState() {
+            const deleteBtn = document.getElementById('btn-clear-file');
+            if (deleteBtn) {
+                if (contextDoc && contextDoc.trim()) {
+                    deleteBtn.style.display = 'inline-block';
+                } else {
+                    deleteBtn.style.display = 'none';
+                }
+            }
         }
 
-        function updateFontStyles() {
-            if (isNaN(fontSizeBase)) {
-                fontSizeBase = 6.5;
-            }
-            const displayEl = document.getElementById('font-size-display');
-            if (displayEl) {
-                displayEl.textContent = `${fontSizeBase.toFixed(1)}vw`;
-            }
-            document.documentElement.style.setProperty('--font-size-base', `${fontSizeBase}vw`);
-        }
-
-        // --- History Logic ---
+        // --- Render UI elements ---
         function renderHistoryUI() {
-            const container = document.getElementById('history-preview');
-            if (!container) return;
-            if (conversationHistory.length === 0) {
-                container.innerHTML = '<div class="history-empty">会話履歴はありません。</div>';
-                return;
-            }
-            container.innerHTML = conversationHistory.map((text, index) => 
-                `<div class="history-item"><strong>#${index + 1}:</strong> ${escapeHtml(text)}</div>`
-            ).join('');
-            
-            // Save log internally
-            safeStorage.setItem('ai_prompter_history', JSON.stringify(conversationHistory));
-        }
-
-        function clearHistory() {
-            if (confirm("会話ログ（コンテキスト）を消去しますか？")) {
-                conversationHistory = [];
-                safeStorage.removeItem('ai_prompter_history');
-                renderHistoryUI();
-            }
+            // Keep conversationHistory clean without debug PRE box
         }
 
         function renderAiHistoryUI() {
-            const container = document.getElementById('main-history-list');
-            if (!container) return;
+            const listEl = document.getElementById('main-history-list');
+            if (!listEl) return;
+            
             if (aiSuggestionsHistory.length === 0) {
-                container.innerHTML = '<div class="history-empty">発言候補履歴はありません。</div>';
+                listEl.innerHTML = '<div class="history-empty">発言候補履歴はありません。</div>';
                 return;
             }
-            container.innerHTML = aiSuggestionsHistory.map((item, index) => {
-                let tagColorStyle = 'color: var(--text-dim);';
-                if (item.tag === 'YELLOW') {
-                    tagColorStyle = 'color: var(--color-yellow);';
-                } else if (item.tag === 'RED') {
-                    tagColorStyle = 'color: var(--color-red);';
-                } else if (item.tag === 'WHITE') {
-                    tagColorStyle = 'color: var(--color-white);';
-                }
-                
-                return `
-                    <div class="main-history-item" data-index="${index}">
+            
+            let html = "";
+            for (let i = 0; i < aiSuggestionsHistory.length; i++) {
+                const item = aiSuggestionsHistory[i];
+                html += `
+                    <div class="main-history-item" onclick="restoreAiSuggestion(${i})">
                         <div class="main-history-meta">
-                            <span style="color: rgba(255, 255, 255, 0.6);">${escapeHtml(item.persona)}</span>
-                            <span style="${tagColorStyle} font-weight: 800;">[${escapeHtml(item.tag)}] ${escapeHtml(item.time)}</span>
+                            <span>[${item.persona}] (${item.time})</span>
                         </div>
                         <div class="main-history-text">${escapeHtml(item.text)}</div>
                     </div>
                 `;
-            }).join('');
+            }
+            listEl.innerHTML = html;
         }
 
-        function renderAgendaProgressUI(phase) {
+        function renderAgendaProgressUI(activeStepNum) {
             const container = document.getElementById('agenda-progress-bar');
             if (!container) return;
             
-            let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
             if (steps.length === 0) {
-                steps = ["前提", "課題", "施策", "実現性", "まとめ"];
+                container.innerHTML = "";
+                return;
             }
-            
-            const targetPhase = Math.max(1, Math.min(phase, steps.length));
-            currentPhase = targetPhase;
             
             let html = "";
             for (let i = 0; i < steps.length; i++) {
                 const stepNum = i + 1;
-                const isCurrent = (stepNum === targetPhase);
-                const dotChar = isCurrent ? "●" : "◯";
+                const dotChar = (stepNum === activeStepNum) ? "●" : "◯";
                 
-                html += `<div class="agenda-step" id="agenda-step-${stepNum}">`;
+                html += `<div class="agenda-step" id="agenda-step-${stepNum}" onclick="handleAgendaStepClick(${stepNum})">`;
                 html += `<span class="agenda-dot">${dotChar}</span>`;
                 html += `<span class="agenda-text">${steps[i]}</span>`;
                 html += `</div>`;
@@ -1662,7 +1509,7 @@
                 if (prompterTextEl.classList.contains('style-yellow')) activeTag = "YELLOW";
                 else if (prompterTextEl.classList.contains('style-red')) activeTag = "RED";
             }
-            updateAgendaGlow(currentPhase, activeTag);
+            updateAgendaGlow(activeStepNum, activeTag);
         }
 
         function updateAgendaGlow(phase, tag) {
@@ -1693,17 +1540,29 @@
             }
         }
 
+        function handleAgendaStepClick(stepNum) {
+            currentPhase = stepNum;
+            renderAgendaProgressUI(currentPhase);
+            console.log(`Agenda step clicked: ${currentPhase}`);
+        }
+
         function restoreAiSuggestion(index) {
             if (index < 0 || index >= aiSuggestionsHistory.length) return;
             const item = aiSuggestionsHistory[index];
             
-            // Update text with scale and transitions
-            updateTextWithScale(item.text, item.tag);
-            
             // Restore phase if it exists
             if (item.phase !== undefined && item.phase !== null) {
                 currentPhase = item.phase;
-                updateAgendaGlow(currentPhase, item.tag);
+                renderAgendaProgressUI(currentPhase);
+            }
+            
+            // Determine if the item belongs to facilitation or normal
+            if (item.persona === "進行") {
+                // If it is 進行, we might have stored it as recommendText.
+                // We'll restore it as recommendText. If there is a state cached, use it.
+                updateTextWithScaleCopilot(item.text, "", lastStateUpdateText);
+            } else {
+                updateTextWithScale(item.text, item.tag);
             }
             
             // Unfocus history container
@@ -1720,7 +1579,6 @@
                 safeStorage.removeItem('ai_prompter_ai_history');
                 renderAiHistoryUI();
                 
-                // Reset phase
                 currentPhase = 1;
                 renderAgendaProgressUI(currentPhase);
                 
@@ -1741,23 +1599,11 @@
                 return;
             }
             
-            // If focused, handle suggestion item click
             const itemEl = e.target.closest('.main-history-item');
             if (itemEl) {
-                const index = parseInt(itemEl.getAttribute('data-index'));
-                restoreAiSuggestion(index);
+                // Clicking suggestion item in history (handled inside render using inline onclick to avoid index binding issues)
             }
         }
-
-        // Global click listener to collapse history panel when clicking outside
-        document.addEventListener('click', (e) => {
-            const container = document.getElementById('main-ai-history');
-            if (container && container.classList.contains('focused')) {
-                if (!container.contains(e.target)) {
-                    container.classList.remove('focused');
-                }
-            }
-        });
 
         function escapeHtml(string) {
             return String(string).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -1786,167 +1632,175 @@
 
             recognition.onresult = (event) => {
                 if (isResettingSession) {
-                    console.log("Ignore results during session reset");
+                    console.log("Recognition results ignored during session reset.");
                     return;
                 }
-                let interimText = "";
-
-                // 未確定テキストのみを抽出して結合
-                for (let i = 0; i < event.results.length; ++i) {
-                    if (!event.results[i].isFinal) {
-                        interimText += event.results[i][0].transcript;
+                
+                lastSpeechTime = Date.now();
+                
+                let interim = "";
+                let final = "";
+                
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const result = event.results[i];
+                    if (result.isFinal) {
+                        final += result[0].transcript;
+                    } else {
+                        interim += result[0].transcript;
                     }
                 }
-
-                // 確定したテキスト部分を重複除去してマージ
-                currentSessionFinalText = mergeSpeechResults(event.results);
-                currentInterimText = interimText;
-
-                // Live preview display
-                const previewEl = document.getElementById('live-transcript');
-                const fullText = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
                 
-                if (fullText) {
-                    previewEl.textContent = fullText;
-                    previewEl.classList.add('active');
-                    
-                    // Reset silence timer because user is speaking
-                    lastSpeechTime = Date.now();
-                    countdownActive = true;
-                } else {
-                    previewEl.textContent = "話しかけてください...";
-                    previewEl.classList.remove('active');
+                currentInterimText = interim;
+                if (final) {
+                    currentSessionFinalText += final;
+                }
+
+                // Normalizing duplicate Chrome Android results
+                let displayTranscript = currentSessionFinalText + currentInterimText;
+                
+                const transcriptEl = document.getElementById('live-transcript');
+                if (transcriptEl) {
+                    transcriptEl.classList.add('active');
+                    transcriptEl.textContent = displayTranscript || "マイク：音声を認識中...";
+                }
+
+                // Buffer trimming helper (limit to 1000 characters)
+                if (currentSessionFinalText.length > 1000) {
+                    currentSessionFinalText = currentSessionFinalText.slice(-500);
                 }
             };
 
             recognition.onerror = (event) => {
-                console.error("Speech Recognition Error:", event.error);
+                console.warn("Speech recognition error:", event.error);
                 if (event.error === 'not-allowed') {
-                    alert("マイクへのアクセスが許可されていません。ブラウザ設定を確認してください。");
-                    stopRecognition();
-                } else if (event.error === 'aborted') {
-                    // Ignored - triggered when recognition.stop() is called manually
-                } else {
-                    updateStatus(`ERROR (${event.error})`, "error");
+                    updateStatus("MIC NOT ALLOWED", "error");
+                    document.getElementById('live-transcript').textContent = "エラー: マイクの使用が許可されていません。ブラウザ設定を確認してください。";
+                } else if (event.error !== 'aborted') {
+                    updateStatus("REC ERROR", "error");
                 }
             };
 
             recognition.onend = () => {
-                console.log("Speech recognition ended.");
-                if (isListening) {
-                    if (isResettingSession) {
-                        console.log("Resetting session: discarding old buffer");
-                        accumulatedPastText = "";
-                        currentSessionFinalText = "";
-                        currentInterimText = "";
-                        isResettingSession = false;
-                    } else {
-                        // セッションが自動切断＆再起動される際、現在セッションで確定しているテキストを過去バッファに退避する
-                        accumulatedPastText += " " + currentSessionFinalText;
-                        currentSessionFinalText = "";
-                        currentInterimText = "";
-                    }
-
-                    // 過去ログバッファが長すぎる（例えば1000文字以上）場合、最新の500文字程度のみを残してトリミングする
-                    if (accumulatedPastText.length > 1000) {
-                        console.log("Speech recognition buffer too long, trimming...");
-                        accumulatedPastText = accumulatedPastText.substring(accumulatedPastText.length - 500);
-                    }
-
-                    // Auto-restart to enable continuous hands-free operation
-                    console.log("Auto-restarting speech recognition...");
+                console.log("Speech recognition ended");
+                // Automatically restart if it was active
+                if (isListening && !isResettingSession) {
+                    console.log("Restarting speech recognition...");
                     try {
                         recognition.start();
-                    } catch (err) {
-                        console.error("Failed to auto-restart speech recognition:", err);
+                    } catch (e) {
+                        console.error("Speech recognition restart failed:", e);
                     }
-                } else {
+                } else if (!isListening) {
                     updateStatus("STOPPED", "stopped");
-                    document.getElementById('live-transcript').textContent = "マイク：停止中";
                     document.getElementById('live-transcript').classList.remove('active');
-                    stopCountdownLoop();
                     releaseWakeLock();
                 }
             };
         }
 
-        function toggleRecording() {
-            if (!recognition) {
-                alert("このブラウザは音声認識をサポートしていません。");
-                return;
-            }
-
+        function toggleListening() {
             if (isListening) {
-                stopRecognition();
+                stopListening();
             } else {
-                startRecognition();
+                startListening();
             }
         }
 
-        function startRecognition() {
+        function startListening() {
+            if (!recognition) return;
             isListening = true;
-            isResettingSession = false;
-            accumulatedPastText = "";
             currentSessionFinalText = "";
             currentInterimText = "";
-            countdownActive = false;
-            lastSpeechTime = null; // 初回は発話検知までタイマーを走らせない
+            lastSpeechTime = Date.now();
             
-            // Clean visual countdown
-            const progressEl = document.getElementById('silence-progress');
-            progressEl.style.width = '0%';
+            document.getElementById('live-transcript').textContent = "マイク：初期化中...";
+            document.getElementById('live-transcript').classList.add('active');
+            
+            updateUIState();
             
             try {
                 recognition.start();
-                updateUIState();
-            } catch (err) {
-                console.error("Error starting recognition:", err);
-                isListening = false;
-                updateUIState();
+            } catch (e) {
+                console.error("Recognition start exception:", e);
             }
         }
 
-        function stopRecognition() {
+        function stopListening() {
             isListening = false;
+            stopCountdownLoop();
+            
             updateUIState();
-            try {
-                recognition.stop();
-            } catch (err) {
-                console.error("Error stopping recognition:", err);
+            
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    console.error("Recognition stop exception:", e);
+                }
             }
         }
 
-        // --- Visual Silence Timer Loop ---
-        function ensureCountdownLoopRunning() {
-            if (silenceCheckInterval) return; // 既にタイマーループが動いていれば何もしない (再接続時のタイマー維持)
+        // Commit voice transcript and reset buffers
+        async function commitTranscriptSegment() {
+            const finalSpeechText = (currentSessionFinalText + currentInterimText).trim();
+            if (!finalSpeechText) {
+                console.log("Transcript segment is empty. Committing skipped.");
+                return;
+            }
             
-            silenceCheckInterval = setInterval(() => {
-                if (!isListening || !lastSpeechTime) return;
+            console.log("Committing speech segment:", finalSpeechText);
+            
+            // Push to context list
+            conversationHistory.push(finalSpeechText);
+            if (conversationHistory.length > historyLimit) {
+                conversationHistory.shift();
+            }
+            safeStorage.setItem('ai_prompter_history', JSON.stringify(conversationHistory));
+            renderHistoryUI();
 
-                const elapsed = Date.now() - lastSpeechTime;
-                const progressEl = document.getElementById('silence-progress');
+            // Set reset flag
+            isResettingSession = true;
+            
+            // UI Visual status
+            const transcriptEl = document.getElementById('live-transcript');
+            if (transcriptEl) {
+                transcriptEl.textContent = "AI分析中... マイクバッファ再起動しています";
+                transcriptEl.classList.remove('active');
+            }
 
-                if (countdownActive) {
-                    // Calculate visual progress percentage (starts at 100% when voice detected, decreases to 0% at configured seconds)
-                    const limitMs = silenceDuration * 1000;
-                    const percent = Math.max(0, 100 - (elapsed / limitMs) * 100);
-                    progressEl.style.width = `${percent}%`;
-
-                    // Update indicator colors based on countdown remaining
-                    if (percent > 40) {
-                        progressEl.style.backgroundColor = '#30d158'; // Green
-                    } else if (percent > 0) {
-                        progressEl.style.backgroundColor = '#ffcc00'; // Yellow
-                    } else {
-                        // 3 seconds passed! Trigger AI request
-                        progressEl.style.backgroundColor = '#ff3b30'; // Red
-                        countdownActive = false;
-                        commitSpeechAndTriggerAI();
-                    }
-                } else {
-                    progressEl.style.width = '0%';
+            // Web Speech API buffer reset logic (forcing restart)
+            try {
+                if (recognition) {
+                    recognition.stop();
                 }
-            }, 50);
+            } catch(e) {
+                console.error("Error stopping recognition on commit:", e);
+            }
+
+            // Reset local buffers
+            currentSessionFinalText = "";
+            currentInterimText = "";
+            lastSpeechTime = Date.now();
+
+            // Fire Gemini suggestion request
+            await sendToGemini();
+
+            // Reset completed, start recognition again safely
+            isResettingSession = false;
+            if (isListening && recognition) {
+                try {
+                    recognition.start();
+                } catch(e) {
+                    console.error("Error restarting recognition after commit:", e);
+                }
+            }
+        }
+
+        // --- Silence Check countdown loop ---
+        function ensureCountdownLoopRunning() {
+            stopCountdownLoop();
+            countdownActive = true;
+            silenceCheckInterval = setInterval(checkSilenceAndTick, 100);
         }
 
         function stopCountdownLoop() {
@@ -1955,79 +1809,50 @@
                 silenceCheckInterval = null;
             }
             countdownActive = false;
-            const progressEl = document.getElementById('silence-progress');
-            progressEl.style.width = '0%';
+            document.getElementById('silence-progress').style.width = "0%";
         }
 
-        // Screen Tap Handler: If running and spoke, instantly trigger. If stopped, start it.
+        function checkSilenceAndTick() {
+            if (!isListening || isResettingSession) return;
+            
+            const timeSinceLastSpeech = Date.now() - lastSpeechTime;
+            const thresholdMs = silenceDuration * 1000;
+            
+            // Fill countdown progress bar
+            let ratio = timeSinceLastSpeech / thresholdMs;
+            if (ratio > 1.0) ratio = 1.0;
+            if (ratio < 0) ratio = 0;
+            
+            const bar = document.getElementById('silence-progress');
+            if (bar) {
+                bar.style.width = `${ratio * 100}%`;
+                
+                // Color transition from blue -> yellow -> red
+                if (ratio > 0.8) {
+                    bar.style.backgroundColor = "var(--color-red)";
+                } else if (ratio > 0.4) {
+                    bar.style.backgroundColor = "var(--color-yellow)";
+                } else {
+                    bar.style.backgroundColor = "#0a84ff";
+                }
+            }
+            
+            if (timeSinceLastSpeech >= thresholdMs) {
+                console.log(`Silence detected (${silenceDuration}s). Committing text segment.`);
+                lastSpeechTime = Date.now(); // throttle repeated triggers
+                commitTranscriptSegment();
+            }
+        }
+
         function handlePrompterTap() {
-            if (!isListening) {
-                console.log("Prompter tapped: starting recording.");
-                startRecognition();
-                return;
-            }
-            
-            const textToCommit = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
-            if (textToCommit) {
-                console.log("Prompter tapped: manual override trigger.");
-                
-                // Immediately reset progress bar to 0%
-                const progressEl = document.getElementById('silence-progress');
-                if (progressEl) {
-                    progressEl.style.width = '0%';
-                    progressEl.style.backgroundColor = '#ff3b30';
-                }
-                countdownActive = false;
-                
-                // Trigger Gemini API immediately
-                commitSpeechAndTriggerAI();
-            } else {
-                console.log("Prompter tapped but no speech captured yet.");
+            if (isListening) {
+                console.log("Prompter screen tapped. Manual submission triggered.");
+                lastSpeechTime = Date.now();
+                commitTranscriptSegment();
             }
         }
 
-        // --- Commit Speech & Call Gemini API ---
-        function commitSpeechAndTriggerAI() {
-            const finalSpeech = (accumulatedPastText + currentSessionFinalText + currentInterimText).trim();
-            
-            // リセット用フラグを立てて、ローカルの認識バッファをクリア
-            isResettingSession = true;
-            accumulatedPastText = "";
-            currentSessionFinalText = "";
-            currentInterimText = "";
-            
-            if (!finalSpeech) {
-                console.log("Silence triggered but speech buffer is empty.");
-                isResettingSession = false;
-                return;
-            }
-
-            console.log("3s Silence detected. Committing speech segment:", finalSpeech);
-            
-            // 音声認識セッションを強制終了（onend で自動で再起動し、結果リストが空から始まる新しいセッションが開始される）
-            if (isListening && recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {
-                    console.error("Error stopping recognition on commit:", e);
-                }
-            }
-            
-            // Add to context memory
-            conversationHistory.push(finalSpeech);
-            if (conversationHistory.length > historyLimit) {
-                conversationHistory.shift();
-            }
-            renderHistoryUI();
-
-            // Reset preview text to empty/listening state
-            document.getElementById('live-transcript').textContent = "入力待ち...";
-            document.getElementById('live-transcript').classList.remove('active');
-
-            // Trigger Gemini request
-            sendToGemini();
-        }
-
+        // --- API Integration (Gemini direct JSON request) ---
         async function sendToGemini() {
             if (!apiKey) {
                 console.warn("API Key is missing. Cannot fetch Gemini suggestion.");
@@ -2042,7 +1867,7 @@
 
             updateStatus("THINKING", "thinking");
             
-            // Get temperature based on selected persona
+            // Fetch temperature per active persona
             const personaTemp = (PERSONA_CONFIGS[activePersona] && PERSONA_CONFIGS[activePersona].temperature !== undefined) ? PERSONA_CONFIGS[activePersona].temperature : 0.75;
 
             // Build text context for the prompt
@@ -2059,13 +1884,19 @@
 （例：発言提案のテキスト [PHASE:2]）`;
             }
 
-            let characterLimitRule = `\n\n【出力文字数制限】
+            let characterLimitRule = "";
+            if (activePersona !== 'facilitate') {
+                characterLimitRule = `\n\n【出力文字数制限】
 提案する発言候補テキストは、全体で必ず「${outputLimit}文字以内」とし、適度に改行を入れて読みやすく作成してください。この文字数上限は厳格に遵守してください。`;
+            } else {
+                characterLimitRule = `\n\n【出力文字数制限】
+【RECOMMEND】のセリフは100文字〜150文字程度とし、全体の出力は簡潔にまとめてください。`;
+            }
 
             let recentSuggestionsRule = "";
             if (aiSuggestionsHistory && aiSuggestionsHistory.length > 0) {
                 const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.text}`).join('\n');
-                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】です。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
+                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】します。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
             }
 
             // ビジネス用語クリシェ排除フィルター
@@ -2095,13 +1926,24 @@
             const systemRule = `【システム指示】
 ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}${clicheRule}${agendaPhaseRule}`;
             
-            const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
-            const userPromptText = `${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
+            // Build dynamic User Prompt based on persona input structure rules
+            let userPromptText = "";
+            if (activePersona === 'facilitate') {
+                const stateText = lastStateUpdateText ? lastStateUpdateText : "（初期状態：議論はまだ開始されていません）";
+                const recentUtterances = conversationHistory.slice(-3);
+                const recentText = recentUtterances.length > 0 
+                    ? recentUtterances.map((text, idx) => `発言: ${text}`).join('\n')
+                    : "（発言はまだありません）";
+                
+                userPromptText = `【入力1：State（前ターンまでの議論の要約）】\n${stateText}\n\n【入力2：直近3発言の生データ（文字起こしノイズを含む）】\n${recentText}\n\n上記に基づき、推奨セリフ、次のアジェンダ/論点、および議論要約を更新して返してください。`;
+            } else {
+                const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
+                userPromptText = `${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
+            }
 
-            // Update debug panel with prompt
             const debugPanel = document.getElementById('debug-info-panel');
 
-            // Payload with native systemInstruction and persona-based temperature
+            // Payload with native systemInstruction
             const payload = {
                 contents: [
                     {
@@ -2117,33 +1959,20 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                     maxOutputTokens: 1000
                 },
                 safetySettings: [
-                    {
-                        category: "HARM_CATEGORY_HARASSMENT",
-                        threshold: "BLOCK_NONE"
-                    },
-                    {
-                        category: "HARM_CATEGORY_HATE_SPEECH",
-                        threshold: "BLOCK_NONE"
-                    },
-                    {
-                        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        threshold: "BLOCK_NONE"
-                    },
-                    {
-                        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        threshold: "BLOCK_NONE"
-                    }
+                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
                 ]
             };
 
-            // gemini-2.5 系のモデルの場合、思考プロセスを無効化（低レイテンシー化）する
+            // thinkingBudget setting for gemini-2.5 models
             if (modelName && typeof modelName === 'string' && modelName.startsWith("gemini-2.5")) {
                 payload.generationConfig.thinkingConfig = {
                     thinkingBudget: 0
                 };
             }
 
-            // We will try v1beta first. If it fails, we will try v1.
             let response = null;
             let errors = {};
             const apiVersions = ['v1beta', 'v1'];
@@ -2158,14 +1987,11 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                     });
                     
                     if (response.ok) {
-                        break; // Success! Break out of loop.
+                        break; 
                     } else {
                         const errText = await response.text();
                         let parsedErr = null;
-                        try {
-                            parsedErr = JSON.parse(errText);
-                        } catch(e) {}
-                        
+                        try { parsedErr = JSON.parse(errText); } catch(e) {}
                         const msg = (parsedErr && parsedErr.error && parsedErr.error.message) ? parsedErr.error.message : (errText || `Status ${response.status}`);
                         errors[version] = msg;
                         console.warn(`Gemini API version ${version} failed:`, msg);
@@ -2178,7 +2004,6 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
             try {
                 if (!response || !response.ok) {
-                    // Prioritize the error message from the primary v1beta endpoint
                     const primaryError = errors['v1beta'] || errors['v1'] || "API Request failed";
                     throw new Error(primaryError);
                 }
@@ -2186,7 +2011,6 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 const data = await response.json();
                 
                 if (debugPanel) {
-                    // Render raw JSON response nicely for developer debugging
                     const prettyResponse = JSON.stringify(data, null, 2);
                     debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
                 }
@@ -2198,8 +2022,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 } else {
                     const candidate = (data && data.candidates && data.candidates[0]) ? data.candidates[0] : {};
                     const finishReason = candidate.finishReason || "UNKNOWN";
-                    const safetyRatings = JSON.stringify(candidate.safetyRatings || {});
-                    throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}, SafetyRatings: ${safetyRatings}`);
+                    throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}`);
                 }
                 
                 if (isListening) {
@@ -2215,119 +2038,170 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                     debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [ERROR] ===\n${err.message}`;
                 }
                 
-                // Show detailed error message on the prompter screen
                 const textEl = document.getElementById('prompter-text');
-                textEl.className = "style-red";
-                
-                // Translate/make known Google API errors action-oriented
-                let displayMsg = err.message;
-                if (displayMsg.includes("API key not valid")) {
-                    displayMsg = "APIキーが無効、または間違っています。Google AI Studioで正しいキーを生成し直してください。";
-                } else if (displayMsg.includes("Generative Language API has not been used") || displayMsg.includes("is disabled")) {
-                    displayMsg = "APIが有効化されていません。Google Cloud Consoleで「Generative Language API」を有効化するか、Google AI Studio（aistudio.google.com）から直接キーを作成し直してください。";
-                } else if (displayMsg.includes("billing")) {
-                    displayMsg = "課金またはクレジット上限エラーです。プロジェクトのステータスを確認してください。";
+                if (textEl) {
+                    textEl.className = "style-red";
+                    
+                    let displayMsg = err.message;
+                    if (displayMsg.includes("API key not valid")) {
+                        displayMsg = "APIキーが無効、または間違っています。Google AI Studioで正しいキーを生成し直してください。";
+                    } else if (displayMsg.includes("Generative Language API has not been used") || displayMsg.includes("is disabled")) {
+                        displayMsg = "APIが有効化されていません。Google Cloud Consoleで「Generative Language API」を有効化してください。";
+                    }
+                    textEl.textContent = `APIエラーが発生しました:\n\n${displayMsg}`;
                 }
-                
-                textEl.textContent = `APIエラーが発生しました:\n\n${displayMsg}\n\n(詳細はブラウザのデベロッパーツール等を確認してください)`;
             }
         }
 
+        // --- Parsing AI response ---
         function parseAndDisplayOutput(rawText) {
-            const textEl = document.getElementById('prompter-text');
             let content = rawText.trim();
             
-            // Extract and strip [PHASE:x] tag at the very beginning
-            const phaseMatch = content.match(/\[PHASE:\s*(\d+)\s*\]/i);
-            if (phaseMatch) {
-                const parsedPhase = parseInt(phaseMatch[1]);
-                const steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
-                const stepsCount = steps.length > 0 ? steps.length : 5;
-                currentPhase = Math.max(1, Math.min(parsedPhase, stepsCount));
-                
-                // Strip the tag from content
-                content = content.replace(/\[PHASE:\s*\d+\s*\]/gi, '').trim();
-            }
-
-            // 1. マークダウンのコードブロック囲み (```json や ```markdown 等) を除去
+            // Remove markdown code blocks
             content = content.replace(/^```[a-zA-Z]*\n/, '');
             content = content.replace(/\n```$/, '');
-            content = content.replace(/```/g, '').trim();
 
-            let matchedTag = "WHITE"; // デフォルトの色は白
-            let tagStringFound = "";
-
-            // 2. 文中から不完全な形式を含むタグ [WHITE], [YELLOW], [RED] を探索する
-            // 閉じ括弧が抜けている [WHITE や、先頭の括弧がない WHITE]、括弧のない文字単体にもマッチさせる
-            const upperContent = content.toUpperCase();
-            if (upperContent.includes("WHITE")) {
-                matchedTag = "WHITE";
-                tagStringFound = "WHITE";
-            } else if (upperContent.includes("YELLOW")) {
-                matchedTag = "YELLOW";
-                tagStringFound = "YELLOW";
-            } else if (upperContent.includes("RED")) {
-                matchedTag = "RED";
-                tagStringFound = "RED";
-            }
-
-            if (tagStringFound) {
-                // 発見したキーワードのインデックスを取得
-                const keywordIndex = upperContent.indexOf(tagStringFound);
-                
-                // キーワードの直前と直後にブラケット '[' や ']' があれば一緒に切り出す
-                let startIndex = keywordIndex;
-                if (keywordIndex > 0 && content[keywordIndex - 1] === '[') {
-                    startIndex = keywordIndex - 1;
+            // 1. Agenda progress parser [PHASE:X]
+            const phaseMatch = content.match(/\[PHASE\s*:\s*(\d+)\]/i);
+            if (phaseMatch) {
+                const matchedPhase = parseInt(phaseMatch[1]);
+                const stepsCount = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0).length || 5;
+                if (matchedPhase >= 1 && matchedPhase <= stepsCount) {
+                    currentPhase = matchedPhase;
+                    renderAgendaProgressUI(currentPhase);
                 }
-                
-                let endIndex = keywordIndex + tagStringFound.length;
-                if (endIndex < content.length && content[endIndex] === ']') {
-                    endIndex = endIndex + 1;
-                }
-                
-                // タグ以前の不要なプレテキストとタグ文字列自体をすべてカット
-                content = content.substring(endIndex).trim();
+                // Strip the tag from text
+                content = content.replace(/\[PHASE\s*:\s*\d+\]/gi, '').trim();
             }
 
-            // 3. 空の応答へのフォールバック
-            if (!content) {
-                content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
-            }
-
-            // 4. 発言候補履歴へ追加して保存
             const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             const personaName = PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].name : activePersona;
-            aiSuggestionsHistory.unshift({
-                persona: personaName,
-                tag: matchedTag,
-                text: content,
-                time: timestamp,
-                phase: currentPhase // Save current phase!
-            });
-            if (aiSuggestionsHistory.length > 20) {
-                aiSuggestionsHistory.pop();
-            }
-            safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
-            renderAiHistoryUI();
 
-            // 5. アニメーション・スケール・TTS適用の表示ロジックへ
-            updateTextWithScale(content, matchedTag);
-            updateAgendaGlow(currentPhase, matchedTag);
+            // 2. Facilitator (Copilot Mode) specific parsing
+            if (activePersona === 'facilitate') {
+                const recIndex = content.indexOf("【RECOMMEND】");
+                const nextIndex = content.indexOf("【NEXT】");
+                const stateIndex = content.indexOf("【STATE_UPDATE】");
+
+                let recommendText = "";
+                let nextTagsText = "";
+                let stateUpdateText = "";
+
+                if (recIndex !== -1) {
+                    let end = content.length;
+                    if (nextIndex !== -1 && nextIndex > recIndex) end = nextIndex;
+                    else if (stateIndex !== -1 && stateIndex > recIndex) end = stateIndex;
+                    recommendText = content.substring(recIndex + "【RECOMMEND】".length, end).trim();
+                }
+
+                if (nextIndex !== -1) {
+                    let end = content.length;
+                    if (stateIndex !== -1 && stateIndex > nextIndex) end = stateIndex;
+                    else if (recIndex !== -1 && recIndex > nextIndex) end = recIndex;
+                    nextTagsText = content.substring(nextIndex + "【NEXT】".length, end).trim();
+                }
+
+                if (stateIndex !== -1) {
+                    let end = content.length;
+                    if (recIndex !== -1 && recIndex > stateIndex) end = recIndex;
+                    else if (nextIndex !== -1 && nextIndex > stateIndex) end = nextIndex;
+                    stateUpdateText = content.substring(stateIndex + "【STATE_UPDATE】".length, end).trim();
+                }
+
+                // If parsing fails to find tags, treat whole text as recommend
+                if (!recommendText && !nextTagsText && !stateUpdateText) {
+                    recommendText = content;
+                }
+
+                // Save state update context to memory for next turn inputs
+                if (stateUpdateText) {
+                    lastStateUpdateText = stateUpdateText;
+                    safeStorage.setItem('ai_prompter_last_state_update', lastStateUpdateText);
+                }
+
+                // AI Suggestion History saving (save recommend text)
+                aiSuggestionsHistory.unshift({
+                    persona: personaName,
+                    tag: "WHITE",
+                    text: recommendText,
+                    time: timestamp,
+                    phase: currentPhase
+                });
+                if (aiSuggestionsHistory.length > 20) {
+                    aiSuggestionsHistory.pop();
+                }
+                safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
+                renderAiHistoryUI();
+
+                // Display using OLED Copilot components
+                updateTextWithScaleCopilot(recommendText, nextTagsText, stateUpdateText);
+                
+            } else {
+                // Strategic or Brainstorm (Normal tag mapping)
+                let matchedTag = "WHITE";
+                let tagStringFound = null;
+                const upperContent = content.toUpperCase();
+
+                if (upperContent.includes("[WHITE]") || upperContent.includes("WHITE:")) {
+                    matchedTag = "WHITE";
+                    tagStringFound = upperContent.includes("[WHITE]") ? "WHITE" : "WHITE";
+                } else if (upperContent.includes("[YELLOW]") || upperContent.includes("YELLOW:")) {
+                    matchedTag = "YELLOW";
+                    tagStringFound = "YELLOW";
+                } else if (upperContent.includes("[RED]") || upperContent.includes("RED:")) {
+                    matchedTag = "RED";
+                    tagStringFound = "RED";
+                }
+
+                if (tagStringFound) {
+                    const keywordIndex = upperContent.indexOf(tagStringFound);
+                    let startIndex = keywordIndex;
+                    if (keywordIndex > 0 && content[keywordIndex - 1] === '[') {
+                        startIndex = keywordIndex - 1;
+                    }
+                    
+                    let endIndex = keywordIndex + tagStringFound.length;
+                    if (endIndex < content.length && content[endIndex] === ']') {
+                        endIndex = endIndex + 1;
+                    }
+                    
+                    content = content.substring(endIndex).trim();
+                }
+
+                if (!content) {
+                    content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
+                }
+
+                // AI Suggestion History saving
+                aiSuggestionsHistory.unshift({
+                    persona: personaName,
+                    tag: matchedTag,
+                    text: content,
+                    time: timestamp,
+                    phase: currentPhase
+                });
+                if (aiSuggestionsHistory.length > 20) {
+                    aiSuggestionsHistory.pop();
+                }
+                safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
+                renderAiHistoryUI();
+
+                // Normal scaling & glow display
+                updateTextWithScale(content, matchedTag);
+                updateAgendaGlow(currentPhase, matchedTag);
+            }
         }
 
-        // --- Dynamic scaling, Transitions, Edge Glow, and Speech Output ---
+        // --- Dynamic scaling, Transitions, Edge Glow for Strategic/Brainstorm ---
         function updateTextWithScale(content, matchedTag) {
             const textEl = document.getElementById('prompter-text');
             const glowEl = document.getElementById('edge-glow');
             if (!textEl || !glowEl) return;
 
-            // アニメーション用に一時的にクラスを付与 (fade-out + slide-down)
             textEl.classList.add('transitioning');
             
             setTimeout(() => {
-                // スタイルの適用
-                textEl.className = ""; // クラスをリセット
+                textEl.className = ""; // Reset
                 
                 let glowClass = "glow-white";
                 if (matchedTag === "YELLOW") {
@@ -2340,14 +2214,13 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                     textEl.classList.add('style-white');
                 }
 
-                // 画面外周の発光エフェクトの更新
                 glowEl.className = `edge-glow ${glowClass}`;
 
-                // 文字数に応じたオートスケールロジック (1〜200文字に対応)
+                // Autoscale text size
                 let scale = 1.0;
                 const length = content.length;
                 if (length > 150) {
-                    scale = 0.55; // 非常に長い場合はフォントサイズを元の 55% に
+                    scale = 0.55;
                 } else if (length > 100) {
                     scale = 0.65;
                 } else if (length > 60) {
@@ -2358,10 +2231,69 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 
                 const calculatedSize = fontSizeBase * scale;
                 textEl.style.fontSize = `${calculatedSize}vw`;
-                
-                // テキストの反映とアニメーション復帰 (fade-in + slide-up)
                 textEl.textContent = content;
-            }, 200); // transitioning のCSSトランジション時間に合わせる
+                
+                textEl.classList.remove('transitioning');
+            }, 200); 
+        }
+
+        // --- Copilot Rich UI Display ---
+        function updateTextWithScaleCopilot(recommend, nextTags, stateUpdate) {
+            const textEl = document.getElementById('prompter-text');
+            const glowEl = document.getElementById('edge-glow');
+            if (!textEl || !glowEl) return;
+
+            textEl.classList.add('transitioning');
+
+            setTimeout(() => {
+                textEl.className = ""; // Reset
+                glowEl.className = 'edge-glow glow-white'; // Facilitator glows white
+
+                // Next Tags Badges parse (often begins with '-' or '・')
+                const tagLines = nextTags.split('\n')
+                    .map(line => line.replace(/^[-・\s*]+/, '').trim())
+                    .filter(line => line.length > 0);
+
+                let tagsHtml = "";
+                if (tagLines.length > 0) {
+                    tagsHtml = `<div class="copilot-tags-container">`;
+                    tagLines.forEach(tag => {
+                        tagsHtml += `<span class="copilot-tag-badge">${escapeHtml(tag)}</span>`;
+                    });
+                    tagsHtml += `</div>`;
+                }
+
+                let stateHtml = "";
+                if (stateUpdate) {
+                    stateHtml = `<div class="copilot-state-container">${escapeHtml(stateUpdate)}</div>`;
+                }
+
+                // Autoscale for recommend text
+                let scale = 1.0;
+                const length = recommend.length;
+                if (length > 150) {
+                    scale = 0.55;
+                } else if (length > 100) {
+                    scale = 0.65;
+                } else if (length > 60) {
+                    scale = 0.8;
+                } else if (length > 30) {
+                    scale = 0.9;
+                }
+                
+                const calculatedSize = fontSizeBase * scale;
+
+                textEl.innerHTML = `
+                    <div class="copilot-container">
+                        <div class="copilot-recommend" style="font-size: ${calculatedSize}vw;">${escapeHtml(recommend)}</div>
+                        ${tagsHtml}
+                        ${stateHtml}
+                    </div>
+                `;
+
+                textEl.classList.remove('transitioning');
+                updateAgendaGlow(currentPhase, "WHITE");
+            }, 200);
         }
 
         // --- Swipe Gestures & Swipe Persona Switching ---
@@ -2398,16 +2330,16 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
             
-            // Y軸の移動量が少なく、X軸の移動量が十分に大きい(60px以上)場合のみ横スワイプと判定
+            // horizontal swipe logic
             if (Math.abs(deltaX) > 60 && Math.abs(deltaY) < 60) {
                 const personas = ['debate', 'brainstorm', 'facilitate'];
                 let currentIndex = personas.indexOf(activePersona);
                 
                 if (deltaX > 0) {
-                    // 右スワイプ -> 前のペルソナ
+                    // Right swipe -> prev persona
                     currentIndex = (currentIndex - 1 + personas.length) % personas.length;
                 } else {
-                    // 左スワイプ -> 次のペルソナ
+                    // Left swipe -> next persona
                     currentIndex = (currentIndex + 1) % personas.length;
                 }
                 switchPersona(personas[currentIndex]);
@@ -2419,16 +2351,15 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             activePersona = persona;
             safeStorage.setItem('ai_prompter_active_persona', activePersona);
             
-            // タブ表示の更新
+            // Update active tab styling
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
             const activeTab = document.getElementById(`tab-${persona}`);
             if (activeTab) activeTab.classList.add('active');
             
-            // システムプロンプト編集エリアとグローバル変数の同期
-            systemPrompt = getSystemPromptForPersona(persona);
+            // Sync setting system prompt editor
+            systemPrompt = safeStorage.getItem(`ai_prompter_system_prompt_${persona}`) || PERSONA_CONFIGS[persona].prompt;
             document.getElementById('setting-system-prompt').value = systemPrompt;
-            
-            // 一時的にグローエフェクトを点滅させて切り替えを通知
+
             const glowEl = document.getElementById('edge-glow');
             if (glowEl) {
                 glowEl.className = 'edge-glow';
@@ -2438,7 +2369,6 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
                 }, 50);
             }
             
-            // UI上のプロンプター文字をペルソナ切り替えに合わせて一時リセット/案内表示
             const textEl = document.getElementById('prompter-text');
             if (textEl) {
                 textEl.style.fontSize = `${fontSizeBase}vw`;
@@ -2449,23 +2379,17 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             console.log(`Persona switched to: ${persona}`);
         }
 
-
-
-        // --- UI State Management Helpers ---
         function updateUIState() {
             const btn = document.getElementById('btn-start-stop');
-            const btnText = document.getElementById('btn-text');
             const iconIdle = document.getElementById('icon-idle');
             const iconRecording = document.getElementById('icon-recording');
-
+            
             if (isListening) {
                 if (btn) btn.classList.add('recording');
-                if (btnText) btnText.textContent = "STOP";
                 if (iconIdle) iconIdle.style.display = 'none';
                 if (iconRecording) iconRecording.style.display = 'block';
             } else {
                 if (btn) btn.classList.remove('recording');
-                if (btnText) btnText.textContent = "START";
                 if (iconIdle) iconIdle.style.display = 'block';
                 if (iconRecording) iconRecording.style.display = 'none';
             }
@@ -2475,15 +2399,16 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
             const dot = document.getElementById('status-dot');
             const label = document.getElementById('status-text');
             
-            label.textContent = text;
-            dot.className = "status-dot"; // reset
-            
-            if (type === 'active') {
-                dot.classList.add('active');
-            } else if (type === 'thinking') {
-                dot.classList.add('thinking');
-            } else if (type === 'error') {
-                dot.classList.add('error');
+            if (label) label.textContent = text;
+            if (dot) {
+                dot.className = "status-dot"; // reset
+                if (type === 'active') {
+                    dot.classList.add('active');
+                } else if (type === 'thinking') {
+                    dot.classList.add('thinking');
+                } else if (type === 'error') {
+                    dot.classList.add('error');
+                }
             }
         }
 
@@ -2519,7 +2444,6 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
         }
 
         function handleVisibilityChange() {
-            // Re-acquire wake lock if returning to screen
             if (document.visibilityState === 'visible' && isListening) {
                 requestWakeLock();
             }
