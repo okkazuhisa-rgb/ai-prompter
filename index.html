@@ -584,10 +584,6 @@
 
             white-space: pre-wrap;
 
-            color: var(--color-white) !important;
-
-            text-shadow: 0 0 20px var(--glow-white);
-
         }
 
         .copilot-tags-container {
@@ -1794,6 +1790,43 @@
 
         <div class="form-group">
 
+            <label>表示ブロック</label>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 6px 0;">
+
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: var(--text-main);">
+
+                    <input type="checkbox" id="show-block-state" checked style="width: 16px; height: 16px; accent-color: var(--color-yellow); cursor: pointer;">
+
+                    会議の現在状況 (State)
+
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: var(--text-main);">
+
+                    <input type="checkbox" id="show-block-recommend" checked style="width: 16px; height: 16px; accent-color: var(--color-yellow); cursor: pointer;">
+
+                    推奨発言 (Recommend)
+
+                </label>
+
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: var(--text-main);">
+
+                    <input type="checkbox" id="show-block-next" checked style="width: 16px; height: 16px; accent-color: var(--color-yellow); cursor: pointer;">
+
+                    次の切り口 (Next)
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+
+
+        <div class="form-group">
+
             <label>プロンプター文字サイズ</label>
 
             <div class="font-size-controls">
@@ -1971,112 +2004,99 @@
 
 
         // --- State Management ---
-
         let recognition = null;
-
         let isListening = false;
-
         let isResettingSession = false; // 会議発話コミット時の音声認識リセット処理中フラグ
-
         let accumulatedPastText = ""; // 過去のセッションで確定したテキストの蓄積
-
         let currentSessionFinalText = ""; // 現在のセッションで確定したテキスト
-
         let currentInterimText = ""; // 現在のセッションの未確定テキスト（一時保存）
-
         let conversationHistory = [];
-
         let aiSuggestionsHistory = [];
-
         let wakeLock = null;
-
         
-
         // Silence Countdown States
-
         let lastSpeechTime = null;
-
         let silenceCheckInterval = null;
-
         let countdownActive = false;
-
         const SILENCE_DURATION_MS = 3000; // 3 seconds
 
-
-
         // Config items
-
         let apiKey = "";
-
         let fontSizeBase = 6.5; // vw unit
-
         let systemPrompt = "";
-
         let historyLimit = 10;
-
         let modelName = "gemini-2.5-flash-lite";
-
         let silenceDuration = 2.0; // 秒（デフォルト2.0秒）
-
         let outputLimit = 200; // 出力文字数制限（デフォルト200文字）
 
-
-
         // Advanced Config & States
-
         let activePersona = "debate";
-
         let contextDoc = ""; // 会議前提資料のテキスト
-
         let agendaPresets = "前提, 課題, 施策, 実現性, まとめ";
-
         let currentPhase = 1;
-
         let lastStateUpdateText = ""; // Copilot Mode State cache
-
-
+        let showBlockState = true;
+        let showBlockRecommend = true;
+        let showBlockNext = true;
+        let lastRecommendText = "";
+        let lastNextTagsText = "";
+        let lastMatchedTag = "WHITE";
 
         const PERSONA_CONFIGS = {
             debate: {
                 name: "戦略",
                 temperature: 0.5,
-                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
+                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、前ターンの要約（State）と直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
+
+あなたの発言の重要度、会議状況に応じて、応答の冒頭に以下のいずれかの色タグを【必ず】1つだけ付記してください。
+- [WHITE] ：通常の論点、建設的な提案、本質を突く質問。
+- [YELLOW]：議論が本質から脱線している際、本質的なアジェンダに強引に引き戻すための切り口。
+- [RED]    ：対立が起きている際、相手の主張の矛盾を突くカウンター、または決定的な妥協案。
+
+【RECOMMEND】
+（ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」。指定された出力文字数制限に従い、適度に改行を入れて読みやすく作成する。定型句や単純なファシリテーション、オウム返しは禁止。具体的な根拠、対立軸の指摘、懸念点、あるいは代替案を提案すること）
+
+【NEXT】
+（議論が手詰まった際の別角度の切り口タグを3つスペース区切りで出力。例：\`[対立論点整理] [代替案提示] [前提条件の再確認]\`。箇条書き不可）
+
+【STATE_UPDATE】
+■ 現在の位置：[フェーズ名と残り時間の目安] [PHASE:番号]
+■ これまでの合意点：
+・（箇取り1〜2点）
+■ 未決の論点・課題：
+・（箇条書き1点）
+※アジェンダ連動のため「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5）を付記すること。
 
 【入力テキストの誤認識に対する超訳ルール】
-入力される会話ログは、Web会議の音声を機械的に文字起こしした「不完全な生データ」です。ノイズや滑舌により、激しい誤字脱字、同音異義語の誤変換（例：「エスオーシー」等の謎のカタカナや、言葉の詰まり）が大量に含まれます。
-あなたはこれらを文字通りに受け取らず、前後の文脈、および事前に与えられた【プロジェクトの前提情報】から、本来発言者が言いたかった「真の意図」をサイレントに超訳・推測した上で、戦略分析を行ってください。
-（例：「仕様の差分」「工数の共有」など、実務的に意味の通る言葉へ脳内補正すること）
-
-【ルール】
-1. 「そうですね」「どう思いますか？」「進めましょう」といった、誰でも言える浅い定型句や単純なファシリテーション、オウム返しは【絶対に禁止】です。
-2. ユーザーがその場で口にすることで、議論のレベルが一気に上がるような「具体的な根拠、対立軸の指摘、懸念点、あるいは代替案」を提案してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
-
-【タグの選定基準】
-- [WHITE] ：鋭い指摘、納得感のある根拠、建設的な提案、本質を突く質問。
-- [YELLOW]：議論が本質から脱線している際、本質的なアジェンダに強引に引き戻すための切り口。
-- [RED]    ：対立が起きている際、相手の主張の矛盾を突くカウンター、または決定的な妥協案。`,
+入力される会話ログは不完全な生データです。前後の文脈や前提情報から本来の意図を汲み取ってサイレントに解釈してください。`,
                 tag: "WHITE"
             },
             brainstorm: {
                 name: "アイデア",
                 temperature: 0.9,
-                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、凝り固まった議論を壊して新しい視点を開くような「独創的なアイデア、常識を疑う別のアプローチ、予期せぬアナロジー」を【指定された出力文字数制限に従い、適度に改行を入れて読みやすく】作成してください。
+                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、前ターンの要約（State）と直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
+
+アイデアの方向性や会議状況に応じて、応答の冒頭に以下のいずれかの色タグを【必ず】1つだけ付記してください。
+- [WHITE] ：通常のユニークな着想、発展性のあるアイデア、面白い仮説。
+- [YELLOW]：前提条件を疑うクリティカルな質問、別角度からのアナロジー。
+- [RED]    ：トレードオフを打破するウルトラC的な解決策、破壊的な代替プラン。
+
+【RECOMMEND】
+（ユーザーの発想を大きく広げるための「斬新な切り口、他業界のモデルの応用、またはユニークな疑問」。指定された出力文字数制限に従い、適度に改行を入れて読みやすく作成する。当たり前の意見やオウム返しは禁止）
+
+【NEXT】
+（議論が手詰まった際の別角度の切り口タグを3つスペース区切りで出力。例：\`[逆張りアイデア] [他業界の類推] [制約の撤廃]\`。箇条書き不可）
+
+【STATE_UPDATE】
+■ 現在の位置：[フェーズ名と残り時間の目安] [PHASE:番号]
+■ これまでの合意点：
+・（箇条書き1〜2点）
+■ 未決の論点・課題：
+・（箇条書き1点）
+※アジェンダ連動のため「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5）を付記すること。
 
 【入力テキストの誤認識に対する超訳ルール】
-入力される会話ログは、Web会議の音声を機械的に文字起こしした「不完全な生データ」です。ノイズや滑舌により、激しい誤字脱字、同音異義語の誤変換（例：「エスオーシー」等の謎のカタカナや、言葉の詰まり）が大量に含まれます。
-あなたはこれらを文字通りに受け取らず、前後の文脈、および事前に与えられた【プロジェクトの前提情報】から、本来発言者が言いたかった「真の意図」をサイレントに超訳・推測した上で、アイデア提案を行ってください。
-（例：「仕様の差分」「工数の共有」など、実務的に意味の通る言葉へ脳内補正すること）
-
-【ルール】
-1. 当たり前の意見やオウム返しは【絶対に禁止】です。
-2. ユーザーの発想を大きく広げるための「斬新な切り口、他業界のモデルの応用、またはユニークな疑問」を提案してください。
-3. 出力フォーマットは、必ずタグに続いて発言内容のみとし、解説や markdown のコードブロック(\`\`\`)は含めないでください。
-
-【タグの選定基準】
-- [WHITE] ：ユニークな着想、発展性のあるアイデア、面白い仮説。
-- [YELLOW]：前提条件を疑うクリティカルな質問、別角度からのアナロジー。
-- [RED]    ：トレードオフを打破するウルトラC的な解決策、破壊的な代替プラン。`,
+入力される会話ログは不完全な生データです。前後の文脈や前提情報から本来の意図を汲み取ってサイレントに解釈してください。`,
                 tag: "WHITE"
             },
             facilitate: {
@@ -2238,6 +2258,14 @@
         // --- Settings Management (localStorage via safeStorage) ---
 
         function loadSettings() {
+            // One-time prompt layout migration (v4)
+            const promptVersion = safeStorage.getItem('ai_prompter_prompt_version');
+            if (promptVersion !== 'v4') {
+                safeStorage.removeItem('ai_prompter_system_prompt_debate');
+                safeStorage.removeItem('ai_prompter_system_prompt_brainstorm');
+                safeStorage.removeItem('ai_prompter_system_prompt_facilitate');
+                safeStorage.setItem('ai_prompter_prompt_version', 'v4');
+            }
 
             apiKey = safeStorage.getItem('ai_prompter_api_key') || "";
 
@@ -2254,6 +2282,10 @@
             outputLimit = parseInt(safeStorage.getItem('ai_prompter_output_limit')) || 200;
 
             lastStateUpdateText = safeStorage.getItem('ai_prompter_last_state_update') || "";
+            
+            showBlockState = safeStorage.getItem('ai_prompter_show_block_state') !== 'false';
+            showBlockRecommend = safeStorage.getItem('ai_prompter_show_block_recommend') !== 'false';
+            showBlockNext = safeStorage.getItem('ai_prompter_show_block_next') !== 'false';
 
             
 
@@ -2377,6 +2409,13 @@
 
             }
 
+            const cbState = document.getElementById('show-block-state');
+            const cbRecommend = document.getElementById('show-block-recommend');
+            const cbNext = document.getElementById('show-block-next');
+            if (cbState) cbState.checked = showBlockState;
+            if (cbRecommend) cbRecommend.checked = showBlockRecommend;
+            if (cbNext) cbNext.checked = showBlockNext;
+
             
 
             // Sync persona tabs
@@ -2419,6 +2458,15 @@
 
             const inputOutputLimit = parseInt(document.getElementById('setting-output-limit').value);
 
+            const inputShowBlockState = document.getElementById('show-block-state').checked;
+            const inputShowBlockRecommend = document.getElementById('show-block-recommend').checked;
+            const inputShowBlockNext = document.getElementById('show-block-next').checked;
+
+            if (!inputShowBlockState && !inputShowBlockRecommend && !inputShowBlockNext) {
+                alert("少なくとも1つの表示ブロックを選択してください。");
+                return;
+            }
+
 
 
             apiKey = inputKey;
@@ -2437,6 +2485,10 @@
 
             outputLimit = inputOutputLimit;
 
+            showBlockState = inputShowBlockState;
+            showBlockRecommend = inputShowBlockRecommend;
+            showBlockNext = inputShowBlockNext;
+
 
 
             safeStorage.setItem('ai_prompter_api_key', apiKey);
@@ -2453,6 +2505,10 @@
 
             safeStorage.setItem('ai_prompter_output_limit', outputLimit);
 
+            safeStorage.setItem('ai_prompter_show_block_state', showBlockState ? 'true' : 'false');
+            safeStorage.setItem('ai_prompter_show_block_recommend', showBlockRecommend ? 'true' : 'false');
+            safeStorage.setItem('ai_prompter_show_block_next', showBlockNext ? 'true' : 'false');
+
             
 
             // Save prompt for the active persona specifically
@@ -2468,6 +2524,10 @@
             updateFileDeleteButtonState();
 
             toggleSettings(false);
+
+            if (lastRecommendText) {
+                updateTextWithScaleCopilot(lastRecommendText, lastNextTagsText, lastStateUpdateText, lastMatchedTag);
+            }
 
             
 
@@ -2504,6 +2564,12 @@
                 safeStorage.removeItem('ai_prompter_output_limit');
 
                 safeStorage.removeItem('ai_prompter_last_state_update');
+
+                safeStorage.removeItem('ai_prompter_show_block_state');
+
+                safeStorage.removeItem('ai_prompter_show_block_recommend');
+
+                safeStorage.removeItem('ai_prompter_show_block_next');
 
                 location.reload();
 
@@ -3117,21 +3183,19 @@
 
             
 
-            // Determine if the item belongs to facilitation or normal
+            // Restore unified cards layout across all personas
 
-            if (item.persona === "進行") {
+            const recommendVal = item.recommend || item.text || "";
 
-                // If it is 進行, we might have stored it as recommendText.
+            const nextTagsVal = item.nextTags || "";
 
-                // We'll restore it as recommendText. If there is a state cached, use it.
+            const stateUpdateVal = item.stateUpdate || "";
 
-                updateTextWithScaleCopilot(item.text, "", lastStateUpdateText);
+            const tagVal = item.tag || "WHITE";
 
-            } else {
+            
 
-                updateTextWithScale(item.text, item.tag);
-
-            }
+            updateTextWithScaleCopilot(recommendVal, nextTagsVal, stateUpdateVal, tagVal);
 
             
 
@@ -3712,117 +3776,58 @@
         // --- API Integration (Gemini direct JSON request) ---
 
         async function sendToGemini() {
-
             if (!apiKey) {
-
                 console.warn("API Key is missing. Cannot fetch Gemini suggestion.");
-
                 updateStatus("API KEY MISSING", "error");
-
                 return;
-
             }
-
-
 
             if (conversationHistory.length === 0) {
-
                 console.log("History is empty. Skipping API request.");
-
                 return;
-
             }
-
-
 
             updateStatus("THINKING", "thinking");
-
             
-
-            // Fetch temperature per active persona
-
+            // Get temperature based on selected persona
             const personaTemp = (PERSONA_CONFIGS[activePersona] && PERSONA_CONFIGS[activePersona].temperature !== undefined) ? PERSONA_CONFIGS[activePersona].temperature : 0.75;
 
-
-
             // Build text context for the prompt
-
             let contextPrompt = "";
-
             if (contextDoc && contextDoc.trim()) {
-
                 contextPrompt = `\n\n【前提資料・アジェンダ】\n${contextDoc.trim()}\n------------------------------`;
-
             }
-
-
 
             let dynamicAgendaRule = "";
-
             if (agendaPresets && agendaPresets.trim()) {
-
                 dynamicAgendaRule = `\n\n【アジェンダ進行指示】
-
 現在の会話内容から、全体のアジェンダ [${agendaPresets.trim()}] のうち、現在どのフェーズに位置しているかを裏で判定してください。
-
 そして、出力する提言テキストの【末尾】に、必ず \`[PHASE:インデックス番号]\`（例: 1から始まるアジェンダ項目の番号。1番目の項目の場合は \`[PHASE:1]\`）というタグのみを付与して返却してください。
-
 （例：発言提案のテキスト [PHASE:2]）`;
-
             }
 
-
-
-            let characterLimitRule = "";
-
-            if (activePersona !== 'facilitate') {
-
-                characterLimitRule = `\n\n【出力文字数制限】
-
+            let characterLimitRule = `\n\n【出力文字数制限】
 提案する発言候補テキストは、全体で必ず「${outputLimit}文字以内」とし、適度に改行を入れて読みやすく作成してください。この文字数上限は厳格に遵守してください。`;
 
-            } else {
-
-                characterLimitRule = `\n\n【出力文字数制限】
-
-【RECOMMEND】のセリフは100文字〜150文字程度とし、全体の出力は簡潔にまとめてください。`;
-
-            }
-
-
-
             let recentSuggestionsRule = "";
-
             if (aiSuggestionsHistory && aiSuggestionsHistory.length > 0) {
-
                 const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.text}`).join('\n');
-
-                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複の絶対禁止ルール】\n過去3ターン以内の出力（上記【直近の提案履歴】）と「文字列として20%以上一致する出力」および「意味的に酷似した提案」は厳格に禁止します。常に最新の直近3発言を反映した、新規の切り口の発言候補を生成してください。`;
-
+                recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】です。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
             }
-
-
 
             // ビジネス用語クリシェ排除フィルター
-
             let clicheRule = `\n\n【表現の禁止・推奨ルール】
-
 以下の曖昧で中身のないビジネス用語（コーポレート・クリシェ）の使用は【厳格に禁止】します。
-
 ・禁止語:「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」「最大化」「推進」「ベクトルを合わせる」
-
 代わりに、より具体的でリアルな実務語彙、または対立軸を突く具体的な指摘を用い、簡潔に提案してください。`;
-
-
 
             // 会議アジェンダ進行フェーズ連動ルール
             let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
             if (steps.length === 0) {
                 steps = ["前提", "課題", "施策", "実現性", "まとめ"];
             }
-
-            let agendaPhaseRule = "";
             let isEarlyPhase = (currentPhase <= 2 || currentPhase <= Math.ceil(steps.length / 2));
+            let agendaPhaseRule = "";
             if (isEarlyPhase) {
                 agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
 現在は会議の前半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '前提・課題'} ]）です。
@@ -3832,270 +3837,154 @@
 現在は会議の後半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '施策・実現性'} ]）です。
 具体的な実行可能性や合意形成のために、リソース、スケジュール、役割分担などの「実行上のボトルネックを指摘する現実的な論点」や「対立点を統合する折衷案・次のステップの提言」を優先してください。`;
             }
-            
+
             // Native systemInstruction payload construction
-
             const systemRule = `【システム指示】
-
 ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}${clicheRule}${agendaPhaseRule}`;
-
             
+            // Build dynamic User Prompt based on persona input structure rules (we pass lastStateUpdateText for State input)
+            const stateText = lastStateUpdateText ? lastStateUpdateText : "（初期状態：議論はまだ開始されていません）";
+            const recentUtterances = conversationHistory.slice(-3);
+            const recentText = recentUtterances.length > 0 
+                ? recentUtterances.map((text, idx) => `発言: ${text}`).join('\n')
+                : "（発言はまだありません）";
+            
+            const userPromptText = `【入力1：State（前ターンまでの議論の要約）】\n${stateText}\n\n【入力2：直近3発言の生データ（文字起こしノイズを含む）】\n${recentText}`;
 
-            // Build dynamic User Prompt based on persona input structure rules
-
-            let userPromptText = "";
-
-            if (activePersona === 'facilitate') {
-
-                const stateText = lastStateUpdateText ? lastStateUpdateText : "（初期状態：議論はまだ開始されていません）";
-
-                const recentUtterances = conversationHistory.slice(-3);
-
-                const recentText = recentUtterances.length > 0 
-
-                    ? recentUtterances.map((text, idx) => `発言: ${text}`).join('\n')
-
-                    : "（発言はまだありません）";
-
-                
-
-                userPromptText = `【入力1：State（前ターンまでの議論の要約）】\n${stateText}\n\n【入力2：直近3発言の生データ（文字起こしノイズを含む）】\n${recentText}`;
-
-            } else {
-
-                const logContent = conversationHistory.map((text, idx) => `発言 #${idx + 1}: ${text}`).join('\n');
-
-                userPromptText = `${logContent}\n\n上記に基づき、次に私が話すべき内容を提案してください。前置きや説明は一切不要です。タグと発言内容のみを出力してください。`;
-
-            }
-
-
-
+            // Update debug panel with prompt
             const debugPanel = document.getElementById('debug-info-panel');
 
-
-
-            // Payload with native systemInstruction
-
+            // Payload with native systemInstruction and persona-based temperature
             const payload = {
-
                 contents: [
-
                     {
-
                         role: "user",
-
                         parts: [{ text: userPromptText }]
-
                     }
-
                 ],
-
                 systemInstruction: {
-
                     parts: [{ text: systemRule }]
-
                 },
-
                 generationConfig: {
-
                     temperature: personaTemp,
-
                     maxOutputTokens: 1000
-
                 },
-
                 safetySettings: [
-
-                    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-
-                    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-
-                    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-
-                    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-
+                    {
+                        category: "HARM_CATEGORY_HARASSMENT",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_HATE_SPEECH",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        threshold: "BLOCK_NONE"
+                    },
+                    {
+                        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        threshold: "BLOCK_NONE"
+                    }
                 ]
-
             };
 
-
-
-            // thinkingBudget setting for gemini-2.5 models
-
+            // gemini-2.5 系のモデルの場合、思考プロセスを無効化（低レイテンシー化）する
             if (modelName && typeof modelName === 'string' && modelName.startsWith("gemini-2.5")) {
-
                 payload.generationConfig.thinkingConfig = {
-
                     thinkingBudget: 0
-
                 };
-
             }
 
-
-
+            // We will try v1beta first. If it fails, we will try v1.
             let response = null;
-
             let errors = {};
-
             const apiVersions = ['v1beta', 'v1'];
 
-
-
             for (const version of apiVersions) {
-
                 const currentUrl = `https://generativelanguage.googleapis.com/${version}/models/${modelName}:generateContent?key=${apiKey}`;
-
                 try {
-
                     response = await fetch(currentUrl, {
-
                         method: 'POST',
-
                         headers: { 'Content-Type': 'application/json' },
-
                         body: JSON.stringify(payload)
-
                     });
-
                     
-
                     if (response.ok) {
-
-                        break; 
-
+                        break; // Success! Break out of loop.
                     } else {
-
                         const errText = await response.text();
-
                         let parsedErr = null;
-
-                        try { parsedErr = JSON.parse(errText); } catch(e) {}
-
+                        try {
+                            parsedErr = JSON.parse(errText);
+                        } catch(e) {}
+                        
                         const msg = (parsedErr && parsedErr.error && parsedErr.error.message) ? parsedErr.error.message : (errText || `Status ${response.status}`);
-
                         errors[version] = msg;
-
                         console.warn(`Gemini API version ${version} failed:`, msg);
-
                     }
-
                 } catch (e) {
-
                     errors[version] = e.message;
-
                     console.warn(`Fetch error for version ${version}:`, e);
-
                 }
-
             }
-
-
 
             try {
-
                 if (!response || !response.ok) {
-
+                    // Prioritize the error message from the primary v1beta endpoint
                     const primaryError = errors['v1beta'] || errors['v1'] || "API Request failed";
-
                     throw new Error(primaryError);
-
                 }
-
-
 
                 const data = await response.json();
-
                 
-
                 if (debugPanel) {
-
+                    // Render raw JSON response nicely for developer debugging
                     const prettyResponse = JSON.stringify(data, null, 2);
-
                     debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [RECEIVED JSON RESPONSE] ===\n${prettyResponse}`;
-
                 }
-
-
 
                 const aiResponseText = (data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) ? data.candidates[0].content.parts[0].text : null;
-
                 
-
                 if (aiResponseText) {
-
                     parseAndDisplayOutput(aiResponseText);
-
                 } else {
-
                     const candidate = (data && data.candidates && data.candidates[0]) ? data.candidates[0] : {};
-
                     const finishReason = candidate.finishReason || "UNKNOWN";
-
-                    throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}`);
-
+                    const safetyRatings = JSON.stringify(candidate.safetyRatings || {});
+                    throw new Error(`Gemini generated no text content. FinishReason: ${finishReason}, SafetyRatings: ${safetyRatings}`);
                 }
-
                 
-
                 if (isListening) {
-
                     updateStatus("LISTENING", "active");
-
                 } else {
-
                     updateStatus("STOPPED", "stopped");
-
                 }
-
             } catch (err) {
-
                 console.error("Gemini Request Failure:", err);
-
                 updateStatus("API ERROR", "error");
-
                 
-
                 if (debugPanel) {
-
                     debugPanel.textContent = `=== [SENT PROMPT] ===\n[SYSTEM INSTRUCTION]\n${systemRule}\n\n[USER PROMPT]\n${userPromptText}\n\n=== [ERROR] ===\n${err.message}`;
-
                 }
-
                 
-
+                // Show detailed error message on the prompter screen
                 const textEl = document.getElementById('prompter-text');
-
-                if (textEl) {
-
-                    textEl.className = "style-red";
-
-                    
-
-                    let displayMsg = err.message;
-
-                    if (displayMsg.includes("API key not valid")) {
-
-                        displayMsg = "APIキーが無効、または間違っています。Google AI Studioで正しいキーを生成し直してください。";
-
-                    } else if (displayMsg.includes("Generative Language API has not been used") || displayMsg.includes("is disabled")) {
-
-                        displayMsg = "APIが有効化されていません。Google Cloud Consoleで「Generative Language API」を有効化してください。";
-
-                    }
-
-                    textEl.textContent = `APIエラーが発生しました:\n\n${displayMsg}`;
-
+                textEl.className = "style-red";
+                
+                // Translate/make known Google API errors action-oriented
+                let displayMsg = err.message;
+                if (displayMsg.includes("API key not valid")) {
+                    displayMsg = "APIキーが無効、または間違っています。Google AI Studioで正しいキーを生成し直してください。";
+                } else if (displayMsg.includes("Generative Language API has not been used") || displayMsg.includes("is disabled")) {
+                    displayMsg = "APIが有効化されていません。Google Cloud Consoleで「Generative Language API」を有効化するか、Google AI Studio（aistudio.google.com）から直接キーを作成し直してください。";
+                } else if (displayMsg.includes("billing")) {
+                    displayMsg = "課金またはクレジット上限エラーです。プロジェクトのステータスを確認してください。";
                 }
-
+                
+                textEl.textContent = `APIエラーが発生しました:\n\n${displayMsg}\n\n(詳細はブラウザのデベロッパーツール等を確認してください)`;
             }
-
         }
-
-
-
-        // --- Parsing AI response ---
 
         function parseAndDisplayOutput(rawText) {
 
@@ -4143,329 +4032,187 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
 
 
-            // 2. Facilitator (Copilot Mode) specific parsing
+            // 2. Uniform Parsing of [WHITE]/[YELLOW]/[RED] color tags
 
-            if (activePersona === 'facilitate') {
+            let matchedTag = "WHITE";
 
-                const recIndex = content.indexOf("【RECOMMEND】");
+            let tagStringFound = null;
 
-                const nextIndex = content.indexOf("【NEXT】");
+            const upperContent = content.toUpperCase();
 
-                const stateIndex = content.indexOf("【STATE_UPDATE】");
 
 
+            if (upperContent.includes("[WHITE]") || upperContent.includes("WHITE:")) {
 
-                let recommendText = "";
+                matchedTag = "WHITE";
 
-                let nextTagsText = "";
+                tagStringFound = upperContent.includes("[WHITE]") ? "[WHITE]" : "WHITE:";
 
-                let stateUpdateText = "";
+            } else if (upperContent.includes("[YELLOW]") || upperContent.includes("YELLOW:")) {
 
+                matchedTag = "YELLOW";
 
+                tagStringFound = upperContent.includes("[YELLOW]") ? "[YELLOW]" : "YELLOW:";
 
-                if (recIndex !== -1) {
+            } else if (upperContent.includes("[RED]") || upperContent.includes("RED:")) {
 
-                    let end = content.length;
+                matchedTag = "RED";
 
-                    if (nextIndex !== -1 && nextIndex > recIndex) end = nextIndex;
-
-                    else if (stateIndex !== -1 && stateIndex > recIndex) end = stateIndex;
-
-                    recommendText = content.substring(recIndex + "【RECOMMEND】".length, end).trim();
-
-                }
-
-
-
-                if (nextIndex !== -1) {
-
-                    let end = content.length;
-
-                    if (stateIndex !== -1 && stateIndex > nextIndex) end = stateIndex;
-
-                    else if (recIndex !== -1 && recIndex > nextIndex) end = recIndex;
-
-                    nextTagsText = content.substring(nextIndex + "【NEXT】".length, end).trim();
-
-                }
-
-
-
-                if (stateIndex !== -1) {
-
-                    let end = content.length;
-
-                    if (recIndex !== -1 && recIndex > stateIndex) end = recIndex;
-
-                    else if (nextIndex !== -1 && nextIndex > stateIndex) end = nextIndex;
-
-                    stateUpdateText = content.substring(stateIndex + "【STATE_UPDATE】".length, end).trim();
-
-                }
-
-
-
-                // If parsing fails to find tags, treat whole text as recommend
-
-                if (!recommendText && !nextTagsText && !stateUpdateText) {
-
-                    recommendText = content;
-
-                }
-
-
-
-                // Save state update context to memory for next turn inputs
-
-                if (stateUpdateText) {
-
-                    lastStateUpdateText = stateUpdateText;
-
-                    safeStorage.setItem('ai_prompter_last_state_update', lastStateUpdateText);
-
-                }
-
-
-
-                // AI Suggestion History saving (save recommend text)
-
-                aiSuggestionsHistory.unshift({
-
-                    persona: personaName,
-
-                    tag: "WHITE",
-
-                    text: recommendText,
-
-                    time: timestamp,
-
-                    phase: currentPhase
-
-                });
-
-                if (aiSuggestionsHistory.length > 20) {
-
-                    aiSuggestionsHistory.pop();
-
-                }
-
-                safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
-
-                renderAiHistoryUI();
-
-
-
-                // Display using OLED Copilot components
-
-                updateTextWithScaleCopilot(recommendText, nextTagsText, stateUpdateText);
-
-                
-
-            } else {
-
-                // Strategic or Brainstorm (Normal tag mapping)
-
-                let matchedTag = "WHITE";
-
-                let tagStringFound = null;
-
-                const upperContent = content.toUpperCase();
-
-
-
-                if (upperContent.includes("[WHITE]") || upperContent.includes("WHITE:")) {
-
-                    matchedTag = "WHITE";
-
-                    tagStringFound = upperContent.includes("[WHITE]") ? "WHITE" : "WHITE";
-
-                } else if (upperContent.includes("[YELLOW]") || upperContent.includes("YELLOW:")) {
-
-                    matchedTag = "YELLOW";
-
-                    tagStringFound = "YELLOW";
-
-                } else if (upperContent.includes("[RED]") || upperContent.includes("RED:")) {
-
-                    matchedTag = "RED";
-
-                    tagStringFound = "RED";
-
-                }
-
-
-
-                if (tagStringFound) {
-
-                    const keywordIndex = upperContent.indexOf(tagStringFound);
-
-                    let startIndex = keywordIndex;
-
-                    if (keywordIndex > 0 && content[keywordIndex - 1] === '[') {
-
-                        startIndex = keywordIndex - 1;
-
-                    }
-
-                    
-
-                    let endIndex = keywordIndex + tagStringFound.length;
-
-                    if (endIndex < content.length && content[endIndex] === ']') {
-
-                        endIndex = endIndex + 1;
-
-                    }
-
-                    
-
-                    content = content.substring(endIndex).trim();
-
-                }
-
-
-
-                if (!content) {
-
-                    content = "（提案された発言を取得できませんでした。もう一度発言してみてください）";
-
-                }
-
-
-
-                // AI Suggestion History saving
-
-                aiSuggestionsHistory.unshift({
-
-                    persona: personaName,
-
-                    tag: matchedTag,
-
-                    text: content,
-
-                    time: timestamp,
-
-                    phase: currentPhase
-
-                });
-
-                if (aiSuggestionsHistory.length > 20) {
-
-                    aiSuggestionsHistory.pop();
-
-                }
-
-                safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
-
-                renderAiHistoryUI();
-
-
-
-                // Normal scaling & glow display
-
-                updateTextWithScale(content, matchedTag);
-
-                updateAgendaGlow(currentPhase, matchedTag);
+                tagStringFound = upperContent.includes("[RED]") ? "[RED]" : "RED:";
 
             }
 
+
+
+            if (tagStringFound) {
+
+                // Strip the color tag from content
+
+                const reg = new RegExp(tagStringFound.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
+
+                content = content.replace(reg, '').trim();
+
+            }
+
+
+
+            // 3. Structured blocks parsing
+
+            const recIndex = content.indexOf("【RECOMMEND】");
+
+            const nextIndex = content.indexOf("【NEXT】");
+
+            const stateIndex = content.indexOf("【STATE_UPDATE】");
+
+
+
+            let recommendText = "";
+
+            let nextTagsText = "";
+
+            let stateUpdateText = "";
+
+
+
+            if (recIndex !== -1) {
+
+                let end = content.length;
+
+                if (nextIndex !== -1 && nextIndex > recIndex) end = nextIndex;
+
+                else if (stateIndex !== -1 && stateIndex > recIndex) end = stateIndex;
+
+                recommendText = content.substring(recIndex + "【RECOMMEND】".length, end).trim();
+
+            }
+
+
+
+            if (nextIndex !== -1) {
+
+                let end = content.length;
+
+                if (stateIndex !== -1 && stateIndex > nextIndex) end = stateIndex;
+
+                else if (recIndex !== -1 && recIndex > nextIndex) end = recIndex;
+
+                nextTagsText = content.substring(nextIndex + "【NEXT】".length, end).trim();
+
+            }
+
+
+
+            if (stateIndex !== -1) {
+
+                let end = content.length;
+
+                if (recIndex !== -1 && recIndex > stateIndex) end = recIndex;
+
+                else if (nextIndex !== -1 && nextIndex > stateIndex) end = nextIndex;
+
+                stateUpdateText = content.substring(stateIndex + "【STATE_UPDATE】".length, end).trim();
+
+            }
+
+
+
+            // If parsing fails to find tags, treat whole text as recommend
+
+            if (!recommendText && !nextTagsText && !stateUpdateText) {
+
+                recommendText = content;
+
+            }
+
+
+
+            // Save state update context to memory for next turn inputs
+
+            if (stateUpdateText) {
+
+                lastStateUpdateText = stateUpdateText;
+
+                safeStorage.setItem('ai_prompter_last_state_update', lastStateUpdateText);
+
+            }
+
+
+
+            // Save parsed components globally for immediate settings apply
+
+            lastRecommendText = recommendText;
+
+            lastNextTagsText = nextTagsText;
+
+            lastMatchedTag = matchedTag;
+
+
+
+            // AI Suggestion History saving
+
+            aiSuggestionsHistory.unshift({
+
+                persona: personaName,
+
+                tag: matchedTag,
+
+                text: recommendText, // Keep for backward compatibility / list rendering
+
+                recommend: recommendText,
+
+                nextTags: nextTagsText,
+
+                stateUpdate: stateUpdateText,
+
+                time: timestamp,
+
+                phase: currentPhase
+
+            });
+
+            if (aiSuggestionsHistory.length > 20) {
+
+                aiSuggestionsHistory.pop();
+
+            }
+
+            safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
+
+            renderAiHistoryUI();
+
+
+
+            // Display using OLED Copilot components
+
+            updateTextWithScaleCopilot(recommendText, nextTagsText, stateUpdateText, matchedTag);
+
+            updateAgendaGlow(currentPhase, matchedTag);
+
         }
-
-
-
-        // --- Dynamic scaling, Transitions, Edge Glow for Strategic/Brainstorm ---
-
-        function updateTextWithScale(content, matchedTag) {
-
-            const textEl = document.getElementById('prompter-text');
-
-            const glowEl = document.getElementById('edge-glow');
-
-            if (!textEl || !glowEl) return;
-
-
-
-            textEl.classList.add('transitioning');
-
-            
-
-            setTimeout(() => {
-
-                textEl.className = ""; // Reset
-
-                
-
-                let glowClass = "glow-white";
-
-                if (matchedTag === "YELLOW") {
-
-                    textEl.classList.add('style-yellow');
-
-                    glowClass = "glow-yellow";
-
-                } else if (matchedTag === "RED") {
-
-                    textEl.classList.add('style-red');
-
-                    glowClass = "glow-red";
-
-                } else {
-
-                    textEl.classList.add('style-white');
-
-                }
-
-
-
-                glowEl.className = `edge-glow ${glowClass}`;
-
-
-
-                // Autoscale text size
-
-                let scale = 1.0;
-
-                const length = content.length;
-
-                if (length > 150) {
-
-                    scale = 0.55;
-
-                } else if (length > 100) {
-
-                    scale = 0.65;
-
-                } else if (length > 60) {
-
-                    scale = 0.8;
-
-                } else if (length > 30) {
-
-                    scale = 0.9;
-
-                }
-
-                
-
-                const calculatedSize = fontSizeBase * scale;
-
-                textEl.style.fontSize = `${calculatedSize}vw`;
-
-                textEl.textContent = content;
-
-                
-
-                textEl.classList.remove('transitioning');
-
-            }, 200); 
-
-        }
-
-
 
         // --- Copilot Rich UI Display ---
 
-        function updateTextWithScaleCopilot(recommend, nextTags, stateUpdate) {
+        function updateTextWithScaleCopilot(recommend, nextTags, stateUpdate, matchedTag = "WHITE") {
 
             const textEl = document.getElementById('prompter-text');
 
@@ -4483,7 +4230,29 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
                 textEl.className = ""; // Reset
 
-                glowEl.className = 'edge-glow glow-white'; // Facilitator glows white
+                const colorTag = (matchedTag || "WHITE").toUpperCase();
+
+                let glowClass = "glow-white";
+
+                let styleClass = "style-white";
+
+                if (colorTag === "YELLOW") {
+
+                    glowClass = "glow-yellow";
+
+                    styleClass = "style-yellow";
+
+                } else if (colorTag === "RED") {
+
+                    glowClass = "glow-red";
+
+                    styleClass = "style-red";
+
+                }
+
+                
+
+                glowEl.className = `edge-glow ${glowClass}`;
 
 
 
@@ -4491,25 +4260,29 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
                 let tagLines = [];
 
-                const regex = /\[([^\]]+)\]/g;
+                if (nextTags) {
 
-                let match;
+                    const regex = /\[([^\]]+)\]/g;
 
-                while ((match = regex.exec(nextTags)) !== null) {
+                    let match;
 
-                    tagLines.push(match[1].trim());
+                    while ((match = regex.exec(nextTags)) !== null) {
 
-                }
+                        tagLines.push(match[1].trim());
 
-                if (tagLines.length === 0) {
+                    }
 
-                    // fallback to splitting by newlines, commas, bullets
+                    if (tagLines.length === 0) {
 
-                    tagLines = nextTags.split(/[\n,、・]+/)
+                        // fallback to splitting by newlines, commas, bullets
 
-                        .map(line => line.replace(/^[-・\s*]+/, '').trim())
+                        tagLines = nextTags.split(/[\n,、・]+/)
 
-                        .filter(line => line.length > 0);
+                            .map(line => line.replace(/^[-・\s*]+/, '').trim())
+
+                            .filter(line => line.length > 0);
+
+                    }
 
                 }
 
@@ -4547,7 +4320,7 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
                 let scale = 1.0;
 
-                const length = recommend.length;
+                const length = recommend ? recommend.length : 0;
 
                 if (length > 150) {
 
@@ -4573,37 +4346,79 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
 
 
-                textEl.innerHTML = `
-                    <div class="copilot-container">
-                        <!-- 1. 会議の現在状況カード (State) -->
-                        ${stateHtml ? `
+                let html = '<div class="copilot-container">';
+
+
+
+                // 1. 会議の現在状況カード (State)
+
+                if (showBlockState && stateHtml) {
+
+                    html += `
+
                         <div class="copilot-card state-card">
+
                             <div class="copilot-card-label">会議の現在状況</div>
+
                             ${stateHtml}
-                        </div>
-                        ` : ''}
 
-                        <!-- 2. 推奨発言カード (Recommend) -->
+                        </div>
+
+                    `;
+
+                }
+
+
+
+                // 2. 推奨発言カード (Recommend)
+
+                if (showBlockRecommend && recommend) {
+
+                    html += `
+
                         <div class="copilot-card recommend-card">
+
                             <div class="copilot-card-label">推奨発言</div>
-                            <div class="copilot-recommend" style="font-size: ${calculatedSize}vw;">${escapeHtml(recommend)}</div>
+
+                            <div class="copilot-recommend ${styleClass}" style="font-size: ${calculatedSize}vw;">${escapeHtml(recommend)}</div>
+
                         </div>
 
-                        <!-- 3. 次の切り口カード (Next) -->
-                        ${tagsHtml ? `
+                    `;
+
+                }
+
+
+
+                // 3. 次の切り口カード (Next)
+
+                if (showBlockNext && tagsHtml) {
+
+                    html += `
+
                         <div class="copilot-card next-card">
+
                             <div class="copilot-card-label">次の切り口</div>
+
                             ${tagsHtml}
+
                         </div>
-                        ` : ''}
-                    </div>
-                `;
+
+                    `;
+
+                }
 
 
+
+                html += '</div>';
+
+
+
+                textEl.innerHTML = html;
 
                 textEl.classList.remove('transitioning');
 
-                updateAgendaGlow(currentPhase, "WHITE");
+                updateAgendaGlow(currentPhase, colorTag);
 
             }, 200);
 
