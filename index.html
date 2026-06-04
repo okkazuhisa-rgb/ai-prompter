@@ -174,17 +174,7 @@
 
         }
 
-        .edge-glow.glow-yellow {
-
-            box-shadow: inset 0 0 40px rgba(255, 204, 0, 0.3);
-
-        }
-
-        .edge-glow.glow-red {
-
-            box-shadow: inset 0 0 40px rgba(255, 59, 48, 0.35);
-
-        }
+        
 
 
 
@@ -248,111 +238,7 @@
 
 
 
-        /* Agenda Progress line */
-
-        .agenda-progress-container {
-
-            display: flex;
-
-            align-items: center;
-
-            justify-content: center;
-
-            gap: 6px;
-
-            margin: 4px auto 8px;
-
-            max-width: 90%;
-
-            width: fit-content;
-
-            align-self: center;
-
-            z-index: 10;
-
-        }
-
-        .agenda-step {
-
-            display: flex;
-
-            align-items: center;
-
-            gap: 4px;
-
-            font-size: 10px;
-
-            color: var(--text-dim);
-
-            font-weight: 600;
-
-            cursor: pointer;
-
-            transition: all 0.3s ease;
-
-            user-select: none;
-
-        }
-
-        .agenda-dot {
-
-            font-size: 11px;
-
-            line-height: 1;
-
-        }
-
-        .agenda-text {
-
-            font-size: 10px;
-
-            letter-spacing: -0.01em;
-
-        }
-
-        .agenda-connector {
-
-            color: rgba(255, 255, 255, 0.15);
-
-            font-size: 9px;
-
-            letter-spacing: -1.5px;
-
-            padding: 0 2px;
-
-            user-select: none;
-
-        }
-
-        .agenda-step.active-white {
-
-            color: var(--color-white) !important;
-
-            font-weight: 800;
-
-            text-shadow: 0 0 10px var(--glow-white);
-
-        }
-
-        .agenda-step.active-yellow {
-
-            color: var(--color-yellow) !important;
-
-            font-weight: 800;
-
-            text-shadow: 0 0 12px var(--glow-yellow);
-
-        }
-
-        .agenda-step.active-red {
-
-            color: var(--color-red) !important;
-
-            font-weight: 800;
-
-            text-shadow: 0 0 12px var(--glow-red);
-
-        }
+        /* Agenda Progress line removed */
 
 
 
@@ -446,21 +332,7 @@
 
         }
 
-        .style-yellow {
-
-            color: var(--color-yellow) !important;
-
-            text-shadow: 0 0 25px var(--glow-yellow);
-
-        }
-
-        .style-red {
-
-            color: var(--color-red) !important;
-
-            text-shadow: 0 0 25px var(--glow-red);
-
-        }
+        
 
 
 
@@ -814,11 +686,11 @@
 
         /* Speech Recognition Transcript Preview */
 
-        .live-preview-container {
+                .live-preview-container {
 
-            padding: 12px 24px;
+            padding: 6px 24px;
 
-            min-height: 100px;
+            min-height: 36px;
 
             display: flex;
 
@@ -844,7 +716,7 @@
 
             display: -webkit-box;
 
-            -webkit-line-clamp: 5;
+            -webkit-line-clamp: 1;
 
             -webkit-box-orient: vertical;
 
@@ -854,7 +726,7 @@
 
             white-space: normal;
 
-            min-height: 90px;
+            min-height: 20px;
 
             opacity: 0.85;
 
@@ -1602,7 +1474,7 @@
 
     <!-- Agenda Progress Line -->
 
-    <div id="agenda-progress-bar" class="agenda-progress-container"></div>
+    
 
 
 
@@ -1810,13 +1682,7 @@
 
                 </label>
 
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: var(--text-main);">
-
-                    <input type="checkbox" id="show-block-next" checked style="width: 16px; height: 16px; accent-color: var(--color-yellow); cursor: pointer;">
-
-                    次の切り口 (Next)
-
-                </label>
+                
 
             </div>
 
@@ -1889,13 +1755,7 @@
 
 
 
-        <div class="form-group">
-
-            <label for="setting-agenda-presets">アジェンダ・プリセット（カンマ区切り）</label>
-
-            <input type="text" id="setting-agenda-presets" placeholder="前提, 課題, 施策, 実現性, まとめ" value="前提, 課題, 施策, 実現性, まとめ">
-
-        </div>
+        
 
 
 
@@ -2032,40 +1892,25 @@
         // Advanced Config & States
         let activePersona = "debate";
         let contextDoc = ""; // 会議前提資料のテキスト
-        let agendaPresets = "前提, 課題, 施策, 実現性, まとめ";
-        let currentPhase = 1;
         let lastStateUpdateText = ""; // Copilot Mode State cache
         let showBlockState = true;
         let showBlockRecommend = true;
-        let showBlockNext = true;
         let lastRecommendText = "";
-        let lastNextTagsText = "";
-        let lastMatchedTag = "WHITE";
 
         const PERSONA_CONFIGS = {
             debate: {
                 name: "戦略",
                 temperature: 0.5,
-                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、前ターンの要約（State）と直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
-
-あなたの発言の重要度、会議状況に応じて、応答の冒頭に以下のいずれかの色タグを【必ず】1つだけ付記してください。
-- [WHITE] ：通常の論点、建設的な提案、本質を突く質問。
-- [YELLOW]：議論が本質から脱線している際、本質的なアジェンダに強引に引き戻すための切り口。
-- [RED]    ：対立が起きている際、相手の主張の矛盾を突くカウンター、または決定的な妥協案。
+                prompt: `あなたはユーザーの思考と発言を強化する超優秀な「戦略（ディベート・ブレイン）」です。会話ログを分析し、現在の議題と合意点、および直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
 
 【RECOMMEND】
 （ユーザーが議論を有利に進めるため、または深い洞察を与えるための「次に発言すべき具体的な論点・切り口・主張・鋭い質問」。指定された出力文字数制限に従い、適度に改行を入れて読みやすく作成する。定型句や単純なファシリテーション、オウム返しは禁止。具体的な根拠、対立軸の指摘、懸念点、あるいは代替案を提案すること）
 
-【NEXT】
-（議論が手詰まった際の別角度の切り口タグを3つスペース区切りで出力。例：\`[対立論点整理] [代替案提示] [前提条件の再確認]\`。箇条書き不可）
-
 【STATE_UPDATE】
-■ 現在の位置：[フェーズ名と残り時間の目安] [PHASE:番号]
-■ これまでの合意点：
-・（箇取り1〜2点）
-■ 未決の論点・課題：
-・（箇条書き1点）
-※アジェンダ連動のため「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5）を付記すること。
+議題：[現在の具体的な議題]
+合意点：
+・[これまでの合意点1]
+・[これまでの合意点2]
 
 【入力テキストの誤認識に対する超訳ルール】
 入力される会話ログは不完全な生データです。前後の文脈や前提情報から本来の意図を汲み取ってサイレントに解釈してください。`,
@@ -2074,26 +1919,16 @@
             brainstorm: {
                 name: "アイデア",
                 temperature: 0.9,
-                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、前ターンの要約（State）と直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
-
-アイデアの方向性や会議状況に応じて、応答の冒頭に以下のいずれかの色タグを【必ず】1つだけ付記してください。
-- [WHITE] ：通常のユニークな着想、発展性のあるアイデア、面白い仮説。
-- [YELLOW]：前提条件を疑うクリティカルな質問、別角度からのアナロジー。
-- [RED]    ：トレードオフを打破するウルトラC的な解決策、破壊的な代替プラン。
+                prompt: `あなたはユーザーの創造性を極限まで高める「ブレインストーミング・パートナー（アイデア・エンジン）」です。会話ログを分析し、現在の議題と合意点、および直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
 
 【RECOMMEND】
 （ユーザーの発想を大きく広げるための「斬新な切り口、他業界のモデルの応用、またはユニークな疑問」。指定された出力文字数制限に従い、適度に改行を入れて読みやすく作成する。当たり前の意見やオウム返しは禁止）
 
-【NEXT】
-（議論が手詰まった際の別角度の切り口タグを3つスペース区切りで出力。例：\`[逆張りアイデア] [他業界の類推] [制約の撤廃]\`。箇条書き不可）
-
 【STATE_UPDATE】
-■ 現在の位置：[フェーズ名と残り時間の目安] [PHASE:番号]
-■ これまでの合意点：
-・（箇条書き1〜2点）
-■ 未決の論点・課題：
-・（箇条書き1点）
-※アジェンダ連動のため「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5）を付記すること。
+議題：[現在の具体的な議題]
+合意点：
+・[これまでの合意点1]
+・[これまでの合意点2]
 
 【入力テキストの誤認識に対する超訳ルール】
 入力される会話ログは不完全な生データです。前後の文脈や前提情報から本来の意図を汲み取ってサイレントに解釈してください。`,
@@ -2102,21 +1937,16 @@
             facilitate: {
                 name: "進行",
                 temperature: 0.3,
-                prompt: `あなたはファシリテーターを支援する「カンペ（副操縦士）」です。前ターンの要約（State）と直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
+                prompt: `あなたはファシリテーターを支援する「カンペ（副操縦士）」です。会話ログを分析し、現在の議題と合意点、および直近3発言から、以下を出力してください。解説やマークダウンは一切出力禁止です。
 
 【RECOMMEND】
 （人間が口頭で言うべき推奨セリフ。100〜150字程度。具体的な問いかけで終える。前置きは不要。アラインやブラッシュアップ等の用語は、多用を避け、使う場合は具体的な内容や文脈を併記して分かりやすくすること）
 
-【NEXT】
-（議論が手詰まった際の別角度の切り口タグを3つスペース区切りで出力。例：\`[管理者側の巻き込み] [通知の工夫] [インセンティブ]\`。箇条書き不可）
-
 【STATE_UPDATE】
-■ 現在の位置：[フェーズ名と残り時間の目安] [PHASE:番号]
-■ これまでの合意点：
-・（箇条書き1〜2点）
-■ 未決の論点・課題：
-・（箇条書き1点）
-※アジェンダ連動のため「現在の位置」の行末に必ず \`[PHASE:番号]\`（1〜5）を付記すること。
+議題：[現在の具体的な議題]
+合意点：
+・[これまでの合意点1]
+・[これまでの合意点2]
 
 【ルール】
 1. 直近3ターンの出力と文字列20%以上一致する表現や、意味的に酷似した提案は禁止。
@@ -2257,329 +2087,182 @@
 
         // --- Settings Management (localStorage via safeStorage) ---
 
-        function loadSettings() {
-            // One-time prompt layout migration (v4)
+                function loadSettings() {
+            // One-time prompt layout migration (v5)
             const promptVersion = safeStorage.getItem('ai_prompter_prompt_version');
-            if (promptVersion !== 'v4') {
+            if (promptVersion !== 'v5') {
                 safeStorage.removeItem('ai_prompter_system_prompt_debate');
                 safeStorage.removeItem('ai_prompter_system_prompt_brainstorm');
                 safeStorage.removeItem('ai_prompter_system_prompt_facilitate');
-                safeStorage.setItem('ai_prompter_prompt_version', 'v4');
+                safeStorage.setItem('ai_prompter_prompt_version', 'v5');
             }
 
             apiKey = safeStorage.getItem('ai_prompter_api_key') || "";
-
             fontSizeBase = parseFloat(safeStorage.getItem('ai_prompter_font_size')) || 6.5;
-
             historyLimit = parseInt(safeStorage.getItem('ai_prompter_history_limit')) || 10;
-
             modelName = safeStorage.getItem('ai_prompter_model_name') || "gemini-2.5-flash-lite";
-
             silenceDuration = parseFloat(safeStorage.getItem('ai_prompter_silence_duration')) || 2.0;
-
-            agendaPresets = safeStorage.getItem('ai_prompter_agenda_presets') || "前提, 課題, 施策, 実現性, まとめ";
-
             outputLimit = parseInt(safeStorage.getItem('ai_prompter_output_limit')) || 200;
-
             lastStateUpdateText = safeStorage.getItem('ai_prompter_last_state_update') || "";
             
             showBlockState = safeStorage.getItem('ai_prompter_show_block_state') !== 'false';
             showBlockRecommend = safeStorage.getItem('ai_prompter_show_block_recommend') !== 'false';
-            showBlockNext = safeStorage.getItem('ai_prompter_show_block_next') !== 'false';
-
-            
 
             let savedPersona = safeStorage.getItem('ai_prompter_active_persona');
-
             if (!savedPersona || !PERSONA_CONFIGS[savedPersona]) {
-
                 savedPersona = "debate";
-
             }
-
             activePersona = savedPersona;
-
             
-
             systemPrompt = getSystemPromptForPersona(activePersona);
-
             contextDoc = safeStorage.getItem('ai_prompter_context_doc') || "";
-
             
-
             const localHist = safeStorage.getItem('ai_prompter_history');
-
             if (localHist) {
-
                 try {
-
                     const parsed = JSON.parse(localHist);
-
                     if (Array.isArray(parsed)) {
-
                         conversationHistory = parsed;
-
-                    } else {
-
-                        conversationHistory = [];
-
                     }
-
-                } catch(e) {
-
-                    conversationHistory = [];
-
+                } catch (e) {
+                    console.warn("Failed to parse history from storage", e);
                 }
-
-            } else {
-
-                conversationHistory = [];
-
             }
 
-
-
-            const savedAiHist = safeStorage.getItem('ai_prompter_ai_history');
-
-            if (savedAiHist) {
-
+            const aiHist = safeStorage.getItem('ai_prompter_ai_history');
+            if (aiHist) {
                 try {
-
-                    const parsed = JSON.parse(savedAiHist);
-
+                    const parsed = JSON.parse(aiHist);
                     if (Array.isArray(parsed)) {
-
                         aiSuggestionsHistory = parsed;
-
-                    } else {
-
-                        aiSuggestionsHistory = [];
-
                     }
-
-                } catch(e) {
-
-                    aiSuggestionsHistory = [];
-
+                } catch (e) {
+                    console.warn("Failed to parse AI suggestions history", e);
                 }
-
-            } else {
-
-                aiSuggestionsHistory = [];
-
             }
 
-
-
-            // Sync with elements
-
-            document.getElementById('setting-api-key').value = apiKey;
-
-            document.getElementById('setting-model-name').value = modelName;
-
-            document.getElementById('setting-history-limit').value = historyLimit;
-
-            document.getElementById('setting-system-prompt').value = systemPrompt;
-
-            document.getElementById('setting-context-doc').value = contextDoc;
-
-            document.getElementById('setting-silence-duration').value = silenceDuration;
-
-            document.getElementById('silence-duration-display').textContent = silenceDuration.toFixed(1) + "秒";
-
+            // Sync settings drawer inputs
+            const apiKeyInput = document.getElementById('setting-api-key');
+            if (apiKeyInput) apiKeyInput.value = apiKey;
             
+            const modelNameInput = document.getElementById('setting-model-name');
+            if (modelNameInput) modelNameInput.value = modelName;
 
-            const limitSlider = document.getElementById('setting-output-limit');
+            const historyLimitInput = document.getElementById('setting-history-limit');
+            if (historyLimitInput) historyLimitInput.value = historyLimit;
 
-            if (limitSlider) {
+            const systemPromptInput = document.getElementById('setting-system-prompt');
+            if (systemPromptInput) systemPromptInput.value = systemPrompt;
 
-                limitSlider.value = outputLimit;
-
-                updateOutputLimitDisplay(outputLimit);
-
+            const silenceDurationInput = document.getElementById('setting-silence-duration');
+            if (silenceDurationInput) {
+                silenceDurationInput.value = silenceDuration;
+                updateSilenceDisplay(silenceDuration);
             }
 
+            const outputLimitInput = document.getElementById('setting-output-limit');
+            if (outputLimitInput) {
+                outputLimitInput.value = outputLimit;
+                updateOutputLimitDisplay(outputLimit);
+            }
 
-
-            const agendaPresetsInput = document.getElementById('setting-agenda-presets');
-
-            if (agendaPresetsInput) {
-
-                agendaPresetsInput.value = agendaPresets;
-
+            const contextDocInput = document.getElementById('setting-context-doc');
+            if (contextDocInput) {
+                contextDocInput.value = contextDoc;
             }
 
             const cbState = document.getElementById('show-block-state');
             const cbRecommend = document.getElementById('show-block-recommend');
-            const cbNext = document.getElementById('show-block-next');
             if (cbState) cbState.checked = showBlockState;
             if (cbRecommend) cbRecommend.checked = showBlockRecommend;
-            if (cbNext) cbNext.checked = showBlockNext;
-
-            
 
             // Sync persona tabs
-
             document.querySelectorAll('.persona-tab').forEach(tab => tab.classList.remove('active'));
-
             const activeTab = document.getElementById(`tab-${activePersona}`);
-
             if (activeTab) activeTab.classList.add('active');
-
             
-
             updateFontStyles();
-
             renderHistoryUI();
-
             renderAiHistoryUI();
-
-            renderAgendaProgressUI(currentPhase);
-
         }
 
 
 
         function saveSettings() {
-
             const inputKey = document.getElementById('setting-api-key').value.trim();
-
             const inputModelName = document.getElementById('setting-model-name').value;
-
             const inputLimit = parseInt(document.getElementById('setting-history-limit').value);
-
             const inputPrompt = document.getElementById('setting-system-prompt').value.trim();
-
             const inputSilence = parseFloat(document.getElementById('setting-silence-duration').value);
-
             const inputContextDoc = document.getElementById('setting-context-doc').value.trim();
-
-            const inputAgendaPresets = document.getElementById('setting-agenda-presets').value.trim();
-
             const inputOutputLimit = parseInt(document.getElementById('setting-output-limit').value);
-
             const inputShowBlockState = document.getElementById('show-block-state').checked;
             const inputShowBlockRecommend = document.getElementById('show-block-recommend').checked;
-            const inputShowBlockNext = document.getElementById('show-block-next').checked;
 
-            if (!inputShowBlockState && !inputShowBlockRecommend && !inputShowBlockNext) {
+            if (!inputShowBlockState && !inputShowBlockRecommend) {
                 alert("少なくとも1つの表示ブロックを選択してください。");
                 return;
             }
 
-
-
             apiKey = inputKey;
-
             modelName = inputModelName;
-
             historyLimit = inputLimit;
-
             systemPrompt = inputPrompt;
-
             silenceDuration = inputSilence;
-
             contextDoc = inputContextDoc;
-
-            agendaPresets = inputAgendaPresets || "前提, 課題, 施策, 実現性, まとめ";
-
             outputLimit = inputOutputLimit;
-
             showBlockState = inputShowBlockState;
             showBlockRecommend = inputShowBlockRecommend;
-            showBlockNext = inputShowBlockNext;
-
-
 
             safeStorage.setItem('ai_prompter_api_key', apiKey);
-
             safeStorage.setItem('ai_prompter_model_name', modelName);
-
             safeStorage.setItem('ai_prompter_history_limit', historyLimit);
-
             safeStorage.setItem('ai_prompter_silence_duration', silenceDuration);
-
             safeStorage.setItem('ai_prompter_context_doc', contextDoc);
-
-            safeStorage.setItem('ai_prompter_agenda_presets', agendaPresets);
-
             safeStorage.setItem('ai_prompter_output_limit', outputLimit);
-
             safeStorage.setItem('ai_prompter_show_block_state', showBlockState ? 'true' : 'false');
             safeStorage.setItem('ai_prompter_show_block_recommend', showBlockRecommend ? 'true' : 'false');
-            safeStorage.setItem('ai_prompter_show_block_next', showBlockNext ? 'true' : 'false');
-
-            
 
             // Save prompt for the active persona specifically
-
             safeStorage.setItem(`ai_prompter_system_prompt_${activePersona}`, systemPrompt);
-
             
-
-            renderAgendaProgressUI(currentPhase);
-
             checkApiKeyStatus();
-
             updateFileDeleteButtonState();
-
             toggleSettings(false);
 
             if (lastRecommendText) {
-                updateTextWithScaleCopilot(lastRecommendText, lastNextTagsText, lastStateUpdateText, lastMatchedTag);
+                updateTextWithScaleCopilot(lastRecommendText, lastStateUpdateText);
             }
-
             
-
             console.log("Settings saved.");
-
         }
 
 
 
         function resetSettingsToDefault() {
-
             if (confirm("設定を初期値（デフォルト）に戻しますか？")) {
-
                 safeStorage.removeItem('ai_prompter_api_key');
-
                 safeStorage.removeItem('ai_prompter_font_size');
-
                 safeStorage.removeItem('ai_prompter_history_limit');
-
                 safeStorage.removeItem('ai_prompter_system_prompt');
-
                 safeStorage.removeItem('ai_prompter_model_name');
-
                 safeStorage.removeItem('ai_prompter_silence_duration');
-
                 safeStorage.removeItem('ai_prompter_history');
-
                 safeStorage.removeItem('ai_prompter_context_doc');
-
                 safeStorage.removeItem('ai_prompter_ai_history');
-
                 safeStorage.removeItem('ai_prompter_agenda_presets');
-
                 safeStorage.removeItem('ai_prompter_output_limit');
-
                 safeStorage.removeItem('ai_prompter_last_state_update');
-
                 safeStorage.removeItem('ai_prompter_show_block_state');
-
                 safeStorage.removeItem('ai_prompter_show_block_recommend');
-
                 safeStorage.removeItem('ai_prompter_show_block_next');
-
                 location.reload();
-
             }
-
         }
 
 
 
-        function toggleDebugInfo(e) {
+function toggleDebugInfo(e) {
 
             const panel = document.getElementById('debug-info-panel');
 
@@ -3023,192 +2706,20 @@
 
 
 
-        function renderAgendaProgressUI(activeStepNum) {
-
-            const container = document.getElementById('agenda-progress-bar');
-
-            if (!container) return;
-
-            
-
-            const steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
-
-            if (steps.length === 0) {
-
-                container.innerHTML = "";
-
-                return;
-
-            }
-
-            
-
-            let html = "";
-
-            for (let i = 0; i < steps.length; i++) {
-
-                const stepNum = i + 1;
-
-                const dotChar = (stepNum === activeStepNum) ? "●" : "◯";
-
-                
-
-                html += `<div class="agenda-step" id="agenda-step-${stepNum}" onclick="handleAgendaStepClick(${stepNum})">`;
-
-                html += `<span class="agenda-dot">${dotChar}</span>`;
-
-                html += `<span class="agenda-text">${steps[i]}</span>`;
-
-                html += `</div>`;
-
-                
-
-                if (i < steps.length - 1) {
-
-                    html += `<div class="agenda-connector">──</div>`;
-
-                }
-
-            }
-
-            
-
-            container.innerHTML = html;
-
-            
-
-            let activeTag = "WHITE";
-
-            const prompterTextEl = document.getElementById('prompter-text');
-
-            if (prompterTextEl) {
-
-                if (prompterTextEl.classList.contains('style-yellow')) activeTag = "YELLOW";
-
-                else if (prompterTextEl.classList.contains('style-red')) activeTag = "RED";
-
-            }
-
-            updateAgendaGlow(activeStepNum, activeTag);
-
-        }
-
-
-
-        function updateAgendaGlow(phase, tag) {
-
-            const steps = document.querySelectorAll('.agenda-step');
-
-            steps.forEach(step => {
-
-                step.classList.remove('active-white', 'active-yellow', 'active-red');
-
-                const dot = step.querySelector('.agenda-dot');
-
-                if (dot) {
-
-                    dot.textContent = "◯";
-
-                }
-
-            });
-
-            
-
-            const activeStep = document.getElementById(`agenda-step-${phase}`);
-
-            if (activeStep) {
-
-                const colorTag = (tag || "WHITE").toUpperCase();
-
-                let activeClass = 'active-white';
-
-                if (colorTag === 'YELLOW') {
-
-                    activeClass = 'active-yellow';
-
-                } else if (colorTag === 'RED') {
-
-                    activeClass = 'active-red';
-
-                }
-
-                activeStep.classList.add(activeClass);
-
-                
-
-                const dot = activeStep.querySelector('.agenda-dot');
-
-                if (dot) {
-
-                    dot.textContent = "●";
-
-                }
-
-            }
-
-        }
-
-
-
-        function handleAgendaStepClick(stepNum) {
-
-            currentPhase = stepNum;
-
-            renderAgendaProgressUI(currentPhase);
-
-            console.log(`Agenda step clicked: ${currentPhase}`);
-
-        }
-
-
-
         function restoreAiSuggestion(index) {
-
             if (index < 0 || index >= aiSuggestionsHistory.length) return;
-
             const item = aiSuggestionsHistory[index];
-
             
-
-            // Restore phase if it exists
-
-            if (item.phase !== undefined && item.phase !== null) {
-
-                currentPhase = item.phase;
-
-                renderAgendaProgressUI(currentPhase);
-
-            }
-
-            
-
-            // Restore unified cards layout across all personas
-
             const recommendVal = item.recommend || item.text || "";
-
-            const nextTagsVal = item.nextTags || "";
-
             const stateUpdateVal = item.stateUpdate || "";
-
-            const tagVal = item.tag || "WHITE";
-
             
-
-            updateTextWithScaleCopilot(recommendVal, nextTagsVal, stateUpdateVal, tagVal);
-
+            updateTextWithScaleCopilot(recommendVal, stateUpdateVal);
             
-
             // Unfocus history container
-
             const container = document.getElementById('main-ai-history');
-
             if (container) {
-
                 container.classList.remove('focused');
-
             }
-
         }
 
 
@@ -3227,11 +2738,6 @@
 
                 
 
-                currentPhase = 1;
-
-                renderAgendaProgressUI(currentPhase);
-
-                
 
                 const container = document.getElementById('main-ai-history');
 
@@ -3798,20 +3304,12 @@
                 contextPrompt = `\n\n【前提資料・アジェンダ】\n${contextDoc.trim()}\n------------------------------`;
             }
 
-            let dynamicAgendaRule = "";
-            if (agendaPresets && agendaPresets.trim()) {
-                dynamicAgendaRule = `\n\n【アジェンダ進行指示】
-現在の会話内容から、全体のアジェンダ [${agendaPresets.trim()}] のうち、現在どのフェーズに位置しているかを裏で判定してください。
-そして、出力する提言テキストの【末尾】に、必ず \`[PHASE:インデックス番号]\`（例: 1から始まるアジェンダ項目の番号。1番目の項目の場合は \`[PHASE:1]\`）というタグのみを付与して返却してください。
-（例：発言提案のテキスト [PHASE:2]）`;
-            }
-
             let characterLimitRule = `\n\n【出力文字数制限】
 提案する発言候補テキストは、全体で必ず「${outputLimit}文字以内」とし、適度に改行を入れて読みやすく作成してください。この文字数上限は厳格に遵守してください。`;
 
             let recentSuggestionsRule = "";
             if (aiSuggestionsHistory && aiSuggestionsHistory.length > 0) {
-                const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.text}`).join('\n');
+                const recents = aiSuggestionsHistory.slice(0, 3).map((item, idx) => `直近の提案 #${idx + 1} [${item.persona}]: ${item.recommend || item.text}`).join('\n');
                 recentSuggestionsRule = `\n\n【直近の提案履歴】\n${recents}\n\n【重複防止ルール】\n上記【直近の提案履歴】に表示されている発言候補と「意味的に重複する、または極めて類似した提案」は【絶対に禁止】です。直近の提案とは異なる角度、異なる論点、または議論を一歩進めるための新しい発言候補を生成してください。`;
             }
 
@@ -3821,26 +3319,9 @@
 ・禁止語:「シナジー」「アライン」「ブラッシュアップ」「最適化を図る」「最大化」「推進」「ベクトルを合わせる」
 代わりに、より具体的でリアルな実務語彙、または対立軸を突く具体的な指摘を用い、簡潔に提案してください。`;
 
-            // 会議アジェンダ進行フェーズ連動ルール
-            let steps = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0);
-            if (steps.length === 0) {
-                steps = ["前提", "課題", "施策", "実現性", "まとめ"];
-            }
-            let isEarlyPhase = (currentPhase <= 2 || currentPhase <= Math.ceil(steps.length / 2));
-            let agendaPhaseRule = "";
-            if (isEarlyPhase) {
-                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
-現在は会議の前半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '前提・課題'} ]）です。
-アイデア発想や論点整理のために、「そもそも〜という前提や意図は何ですか？」「見落としている根本的な課題は何か」といった、前提や課題の核心に迫る「本質的な問いかけ」や「対立軸の指摘」を優先してください。`;
-            } else {
-                agendaPhaseRule = `\n\n【アジェンダフェーズ連動ルール】
-現在は会議の後半フェーズ（現在のステップ: [${steps[currentPhase - 1] || '施策・実現性'} ]）です。
-具体的な実行可能性や合意形成のために、リソース、スケジュール、役割分担などの「実行上のボトルネックを指摘する現実的な論点」や「対立点を統合する折衷案・次のステップの提言」を優先してください。`;
-            }
-
             // Native systemInstruction payload construction
             const systemRule = `【システム指示】
-${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recentSuggestionsRule}${clicheRule}${agendaPhaseRule}`;
+${systemPrompt}${contextPrompt}${characterLimitRule}${recentSuggestionsRule}${clicheRule}`;
             
             // Build dynamic User Prompt based on persona input structure rules (we pass lastStateUpdateText for State input)
             const stateText = lastStateUpdateText ? lastStateUpdateText : "（初期状態：議論はまだ開始されていません）";
@@ -3987,442 +3468,133 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
         }
 
         function parseAndDisplayOutput(rawText) {
-
             let content = rawText.trim();
-
             
-
             // Remove markdown code blocks
-
             content = content.replace(/^```[a-zA-Z]*\n/, '');
-
             content = content.replace(/\n```$/, '');
 
-
-
-            // 1. Agenda progress parser [PHASE:X]
-
-            const phaseMatch = content.match(/\[PHASE\s*:\s*(\d+)\]/i);
-
-            if (phaseMatch) {
-
-                const matchedPhase = parseInt(phaseMatch[1]);
-
-                const stepsCount = agendaPresets.split(',').map(s => s.trim()).filter(s => s.length > 0).length || 5;
-
-                if (matchedPhase >= 1 && matchedPhase <= stepsCount) {
-
-                    currentPhase = matchedPhase;
-
-                    renderAgendaProgressUI(currentPhase);
-
-                }
-
-                // Strip the tag from text
-
-                content = content.replace(/\[PHASE\s*:\s*\d+\]/gi, '').trim();
-
-            }
-
-
-
             const timestamp = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
             const personaName = PERSONA_CONFIGS[activePersona] ? PERSONA_CONFIGS[activePersona].name : activePersona;
 
-
-
-            // 2. Uniform Parsing of [WHITE]/[YELLOW]/[RED] color tags
-
-            let matchedTag = "WHITE";
-
-            let tagStringFound = null;
-
-            const upperContent = content.toUpperCase();
-
-
-
-            if (upperContent.includes("[WHITE]") || upperContent.includes("WHITE:")) {
-
-                matchedTag = "WHITE";
-
-                tagStringFound = upperContent.includes("[WHITE]") ? "[WHITE]" : "WHITE:";
-
-            } else if (upperContent.includes("[YELLOW]") || upperContent.includes("YELLOW:")) {
-
-                matchedTag = "YELLOW";
-
-                tagStringFound = upperContent.includes("[YELLOW]") ? "[YELLOW]" : "YELLOW:";
-
-            } else if (upperContent.includes("[RED]") || upperContent.includes("RED:")) {
-
-                matchedTag = "RED";
-
-                tagStringFound = upperContent.includes("[RED]") ? "[RED]" : "RED:";
-
-            }
-
-
-
-            if (tagStringFound) {
-
-                // Strip the color tag from content
-
-                const reg = new RegExp(tagStringFound.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'i');
-
-                content = content.replace(reg, '').trim();
-
-            }
-
-
-
-            // 3. Structured blocks parsing
-
+            // Structured blocks parsing
             const recIndex = content.indexOf("【RECOMMEND】");
-
-            const nextIndex = content.indexOf("【NEXT】");
-
             const stateIndex = content.indexOf("【STATE_UPDATE】");
 
-
-
             let recommendText = "";
-
-            let nextTagsText = "";
-
             let stateUpdateText = "";
 
-
-
             if (recIndex !== -1) {
-
                 let end = content.length;
-
-                if (nextIndex !== -1 && nextIndex > recIndex) end = nextIndex;
-
-                else if (stateIndex !== -1 && stateIndex > recIndex) end = stateIndex;
-
+                if (stateIndex !== -1 && stateIndex > recIndex) end = stateIndex;
                 recommendText = content.substring(recIndex + "【RECOMMEND】".length, end).trim();
-
             }
-
-
-
-            if (nextIndex !== -1) {
-
-                let end = content.length;
-
-                if (stateIndex !== -1 && stateIndex > nextIndex) end = stateIndex;
-
-                else if (recIndex !== -1 && recIndex > nextIndex) end = recIndex;
-
-                nextTagsText = content.substring(nextIndex + "【NEXT】".length, end).trim();
-
-            }
-
-
 
             if (stateIndex !== -1) {
-
                 let end = content.length;
-
                 if (recIndex !== -1 && recIndex > stateIndex) end = recIndex;
-
-                else if (nextIndex !== -1 && nextIndex > stateIndex) end = nextIndex;
-
                 stateUpdateText = content.substring(stateIndex + "【STATE_UPDATE】".length, end).trim();
-
             }
-
-
 
             // If parsing fails to find tags, treat whole text as recommend
-
-            if (!recommendText && !nextTagsText && !stateUpdateText) {
-
+            if (!recommendText && !stateUpdateText) {
                 recommendText = content;
-
             }
-
-
 
             // Save state update context to memory for next turn inputs
-
             if (stateUpdateText) {
-
                 lastStateUpdateText = stateUpdateText;
-
                 safeStorage.setItem('ai_prompter_last_state_update', lastStateUpdateText);
-
             }
 
-
-
             // Save parsed components globally for immediate settings apply
-
             lastRecommendText = recommendText;
 
-            lastNextTagsText = nextTagsText;
-
-            lastMatchedTag = matchedTag;
-
-
-
             // AI Suggestion History saving
-
             aiSuggestionsHistory.unshift({
-
                 persona: personaName,
-
-                tag: matchedTag,
-
                 text: recommendText, // Keep for backward compatibility / list rendering
-
                 recommend: recommendText,
-
-                nextTags: nextTagsText,
-
                 stateUpdate: stateUpdateText,
-
-                time: timestamp,
-
-                phase: currentPhase
-
+                time: timestamp
             });
 
             if (aiSuggestionsHistory.length > 20) {
-
                 aiSuggestionsHistory.pop();
-
             }
-
             safeStorage.setItem('ai_prompter_ai_history', JSON.stringify(aiSuggestionsHistory));
-
             renderAiHistoryUI();
 
-
-
             // Display using OLED Copilot components
-
-            updateTextWithScaleCopilot(recommendText, nextTagsText, stateUpdateText, matchedTag);
-
-            updateAgendaGlow(currentPhase, matchedTag);
-
+            updateTextWithScaleCopilot(recommendText, stateUpdateText);
         }
+
+
 
         // --- Copilot Rich UI Display ---
 
-        function updateTextWithScaleCopilot(recommend, nextTags, stateUpdate, matchedTag = "WHITE") {
-
+        function updateTextWithScaleCopilot(recommend, stateUpdate) {
             const textEl = document.getElementById('prompter-text');
-
             const glowEl = document.getElementById('edge-glow');
-
             if (!textEl || !glowEl) return;
-
-
 
             textEl.classList.add('transitioning');
 
-
-
             setTimeout(() => {
-
                 textEl.className = ""; // Reset
-
-                const colorTag = (matchedTag || "WHITE").toUpperCase();
-
-                let glowClass = "glow-white";
-
-                let styleClass = "style-white";
-
-                if (colorTag === "YELLOW") {
-
-                    glowClass = "glow-yellow";
-
-                    styleClass = "style-yellow";
-
-                } else if (colorTag === "RED") {
-
-                    glowClass = "glow-red";
-
-                    styleClass = "style-red";
-
-                }
-
-                
-
-                glowEl.className = `edge-glow ${glowClass}`;
-
-
-
-                // Next Tags Badges parse (support bracket tags e.g. [tag1] [tag2])
-
-                let tagLines = [];
-
-                if (nextTags) {
-
-                    const regex = /\[([^\]]+)\]/g;
-
-                    let match;
-
-                    while ((match = regex.exec(nextTags)) !== null) {
-
-                        tagLines.push(match[1].trim());
-
-                    }
-
-                    if (tagLines.length === 0) {
-
-                        // fallback to splitting by newlines, commas, bullets
-
-                        tagLines = nextTags.split(/[\n,、・]+/)
-
-                            .map(line => line.replace(/^[-・\s*]+/, '').trim())
-
-                            .filter(line => line.length > 0);
-
-                    }
-
-                }
-
-
-
-                let tagsHtml = "";
-
-                if (tagLines.length > 0) {
-
-                    tagsHtml = `<div class="copilot-tags-container">`;
-
-                    tagLines.forEach(tag => {
-
-                        tagsHtml += `<span class="copilot-tag-badge">${escapeHtml(tag)}</span>`;
-
-                    });
-
-                    tagsHtml += `</div>`;
-
-                }
-
-
+                glowEl.className = 'edge-glow glow-white'; // Stable premium white glow
 
                 let stateHtml = "";
-
                 if (stateUpdate) {
-
                     stateHtml = `<div class="copilot-state-container">${escapeHtml(stateUpdate)}</div>`;
-
                 }
-
-
 
                 // Autoscale for recommend text
-
                 let scale = 1.0;
-
                 const length = recommend ? recommend.length : 0;
-
                 if (length > 150) {
-
                     scale = 0.55;
-
                 } else if (length > 100) {
-
                     scale = 0.65;
-
                 } else if (length > 60) {
-
                     scale = 0.8;
-
                 } else if (length > 30) {
-
                     scale = 0.9;
-
                 }
-
                 
-
                 const calculatedSize = fontSizeBase * scale;
-
-
 
                 let html = '<div class="copilot-container">';
 
-
-
                 // 1. 会議の現在状況カード (State)
-
                 if (showBlockState && stateHtml) {
-
                     html += `
-
                         <div class="copilot-card state-card">
-
                             <div class="copilot-card-label">会議の現在状況</div>
-
                             ${stateHtml}
-
                         </div>
-
                     `;
-
                 }
-
-
 
                 // 2. 推奨発言カード (Recommend)
-
                 if (showBlockRecommend && recommend) {
-
                     html += `
-
                         <div class="copilot-card recommend-card">
-
                             <div class="copilot-card-label">推奨発言</div>
-
-                            <div class="copilot-recommend ${styleClass}" style="font-size: ${calculatedSize}vw;">${escapeHtml(recommend)}</div>
-
+                            <div class="copilot-recommend style-white" style="font-size: ${calculatedSize}vw;">${escapeHtml(recommend)}</div>
                         </div>
-
                     `;
-
                 }
-
-
-
-                // 3. 次の切り口カード (Next)
-
-                if (showBlockNext && tagsHtml) {
-
-                    html += `
-
-                        <div class="copilot-card next-card">
-
-                            <div class="copilot-card-label">次の切り口</div>
-
-                            ${tagsHtml}
-
-                        </div>
-
-                    `;
-
-                }
-
-
 
                 html += '</div>';
 
-
-
                 textEl.innerHTML = html;
-
                 textEl.classList.remove('transitioning');
-
-                updateAgendaGlow(currentPhase, colorTag);
-
             }, 200);
-
         }
+
+        // --- Swipe Gestures & Swipe Persona Switching ---
+
 
 
 
@@ -4578,9 +3750,9 @@ ${systemPrompt}${contextPrompt}${dynamicAgendaRule}${characterLimitRule}${recent
 
                 textEl.style.fontSize = `${fontSizeBase}vw`;
 
-                textEl.className = "style-white";
+                textEl.className = "initial-placeholder";
 
-                textEl.innerHTML = `${PERSONA_CONFIGS[persona].name}モードに切り替えました。<br>話しかけるとこのモードで提案を生成します。`;
+                textEl.textContent = `${PERSONA_CONFIGS[persona].name}モード`;
 
             }
 
